@@ -142,6 +142,33 @@ class UserProgressProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> addXPWithAnimation(int amount, String source) async {
+    if (amount <= 0) return;
+
+    // Simulate animated XP gain by adding gradually
+    final oldXP = _userProgress.totalXP;
+    final newTotalXP = oldXP + amount;
+    
+    // Small delay for animation effect
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    final newLevel = _calculateLevel(newTotalXP);
+    final newXpToNextLevel = UserProgress.calculateXPForNextLevel(newLevel);
+
+    _userProgress = _userProgress.copyWith(
+      totalXP: newTotalXP,
+      currentLevel: newLevel,
+      xpToNextLevel: newXpToNextLevel,
+    );
+
+    // Check for level achievements
+    if (newLevel > _userProgress.currentLevel) {
+      await _checkLevelAchievements(newLevel);
+    }
+
+    notifyListeners();
+  }
+
   Future<void> incrementHabitCompletion() async {
     _userProgress = _userProgress.copyWith(
       totalHabitsCompleted: _userProgress.totalHabitsCompleted + 1,

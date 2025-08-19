@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shinko/src/domain/entities/habit.dart';
 import 'package:shinko/src/presentation/providers/habit_provider.dart';
 import 'package:shinko/src/presentation/providers/user_progress_provider.dart';
+import 'package:shinko/src/presentation/providers/motivation_provider.dart';
 import 'package:shinko/src/presentation/theme/app_theme.dart';
 
 class DailyDashboardScreen extends StatefulWidget {
@@ -48,6 +49,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HabitProvider>().loadHabits();
       context.read<UserProgressProvider>().loadUserProgress();
+      context.read<MotivationProvider>().loadDailyQuote();
     });
   }
 
@@ -74,12 +76,12 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddHabitDialog(context),
+        onPressed: () => _showQuickAddModal(context),
         child: const Icon(Icons.add),
       ),
       body: SafeArea(
-        child: Consumer2<HabitProvider, UserProgressProvider>(
-          builder: (context, habitProvider, userProvider, child) {
+        child: Consumer3<HabitProvider, UserProgressProvider, MotivationProvider>(
+          builder: (context, habitProvider, userProvider, motivationProvider, child) {
             if (habitProvider.isLoading || userProvider.isLoading) {
               return const Center(child: CircularProgressIndicator());
             }
@@ -103,6 +105,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildWelcomeHeader(),
+                        const SizedBox(height: 16),
+                        _buildMotivationCard(motivationProvider),
                         const SizedBox(height: 24),
                         _buildProgressCard(userProvider),
                         const SizedBox(height: 24),
@@ -119,6 +123,70 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildMotivationCard(MotivationProvider motivationProvider) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.lightbulb_outline,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Daily Motivation',
+                style: AppTheme.titleMedium.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            motivationProvider.currentQuote,
+            style: AppTheme.bodyMedium.copyWith(
+              fontStyle: FontStyle.italic,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              icon: Icon(
+                Icons.refresh,
+                size: 20,
+                color: Colors.grey[400],
+              ),
+              onPressed: () => motivationProvider.refreshQuote(),
+              tooltip: 'New quote',
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -158,7 +226,23 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
 
   Widget _buildProgressCard(UserProgressProvider userProvider) {
     return Container(
-      decoration: AppTheme.neonCardDecoration,
+      decoration: AppTheme.neonCardDecoration.copyWith(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,32 +250,129 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Level ${userProvider.userProgress.currentLevel}',
-                style: AppTheme.titleLarge,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.star,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Level ${userProvider.userProgress.currentLevel}',
+                    style: AppTheme.titleLarge.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '${userProvider.userProgress.totalXP} XP',
-                style: AppTheme.bodyMedium,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${userProvider.userProgress.totalXP} XP',
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: userProvider.levelProgress,
-              backgroundColor: Colors.white.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                AppTheme.darkTheme.colorScheme.primary,
-              ),
-              minHeight: 8,
+          const SizedBox(height: 16),
+          Container(
+            height: 12,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Colors.purple.shade300,
+                        Colors.pink.shade200,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  width: MediaQuery.of(context).size.width * 0.8 * userProvider.levelProgress,
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.3),
+                        Colors.transparent,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            '${(userProvider.levelProgress * 100).toStringAsFixed(0)}% to next level',
-            style: AppTheme.caption,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Progress to Level ${userProvider.userProgress.currentLevel + 1}',
+                style: AppTheme.caption.copyWith(
+                  color: Colors.white70,
+                ),
+              ),
+              Text(
+                '${(userProvider.levelProgress * 100).toStringAsFixed(0)}%',
+                style: AppTheme.caption.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          AnimatedOpacity(
+            opacity: userProvider.levelProgress > 0.9 ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 500),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '🚀 Almost there!',
+                style: AppTheme.caption.copyWith(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -418,7 +599,208 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
     );
   }
 
-  void _showAddHabitDialog(BuildContext context) {
+  void _showQuickAddModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppTheme.darkTheme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[600],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  'Quick Add Habit',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    _buildHabitTemplate(
+                      context,
+                      icon: Icons.menu_book,
+                      title: 'Read 20 mins',
+                      description: 'Daily reading for knowledge growth',
+                      category: 'Learning',
+                      xp: 15,
+                    ),
+                    _buildHabitTemplate(
+                      context,
+                      icon: Icons.fitness_center,
+                      title: 'Workout',
+                      description: 'Exercise for physical health',
+                      category: 'Health',
+                      xp: 25,
+                    ),
+                    _buildHabitTemplate(
+                      context,
+                      icon: Icons.self_improvement,
+                      title: 'Meditate 10 mins',
+                      description: 'Mindfulness and mental clarity',
+                      category: 'Wellness',
+                      xp: 20,
+                    ),
+                    _buildHabitTemplate(
+                      context,
+                      icon: Icons.water_drop,
+                      title: 'Drink 8 glasses water',
+                      description: 'Stay hydrated throughout the day',
+                      category: 'Health',
+                      xp: 10,
+                    ),
+                    _buildHabitTemplate(
+                      context,
+                      icon: Icons.code,
+                      title: 'Code 1 hour',
+                      description: 'Daily programming practice',
+                      category: 'Learning',
+                      xp: 30,
+                    ),
+                    _buildHabitTemplate(
+                      context,
+                      icon: Icons.brush,
+                      title: 'Creative time',
+                      description: 'Drawing, writing, or creative work',
+                      category: 'Creativity',
+                      xp: 20,
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showCustomHabitDialog(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                    ),
+                    child: const Text('Create Custom Habit'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHabitTemplate(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+    required String category,
+    required int xp,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: Colors.grey[900],
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          final habitProvider = context.read<HabitProvider>();
+          final habit = Habit(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            title: title,
+            description: description,
+            type: HabitType.daily,
+            category: _getCategoryFromString(category),
+            difficulty: HabitDifficulty.easy,
+            xpValue: xp,
+            createdAt: DateTime.now(),
+          );
+          habitProvider.addHabit(habit);
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added "$title" (+$xp XP)'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '+$xp XP',
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCustomHabitDialog(BuildContext context) {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     HabitCategory selectedCategory = HabitCategory.health;
@@ -428,7 +810,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkTheme.cardTheme.color,
-        title: const Text('Add New Habit'),
+        title: const Text('Create Custom Habit'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -503,6 +885,29 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
         ],
       ),
     );
+  }
+
+  HabitCategory _getCategoryFromString(String category) {
+    switch (category.toLowerCase()) {
+      case 'health':
+        return HabitCategory.health;
+      case 'productivity':
+        return HabitCategory.productivity;
+      case 'learning':
+        return HabitCategory.learning;
+      case 'fitness':
+        return HabitCategory.fitness;
+      case 'mindfulness':
+        return HabitCategory.mindfulness;
+      case 'social':
+        return HabitCategory.social;
+      case 'finance':
+        return HabitCategory.finance;
+      case 'creativity':
+        return HabitCategory.creativity;
+      default:
+        return HabitCategory.other;
+    }
   }
 
   int _calculateXPForDifficulty(HabitDifficulty difficulty) {

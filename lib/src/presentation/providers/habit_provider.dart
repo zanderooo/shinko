@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shinko/src/domain/entities/habit.dart';
 import 'package:shinko/src/domain/repositories/habit_repository.dart';
+import 'package:shinko/src/presentation/providers/user_progress_provider.dart';
+import 'package:shinko/src/core/navigator_key.dart';
 
 class HabitProvider with ChangeNotifier {
   final HabitRepository _habitRepository;
@@ -144,8 +147,23 @@ class HabitProvider with ChangeNotifier {
 
   Future<void> completeHabit(String id) async {
     try {
+      final habit = getHabitById(id);
+      if (habit == null) return;
+
       await _habitRepository.completeHabit(id, DateTime.now());
       await loadHabits();
+      
+      // Award XP with animation
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        final userProgressProvider = 
+            Provider.of<UserProgressProvider>(context, listen: false);
+        await userProgressProvider.addXPWithAnimation(habit.xpValue, 'habit_completion');
+        
+        // Update habit completion count
+        await userProgressProvider.incrementHabitCompletion();
+      }
+      
     } catch (e) {
       _error = 'Failed to complete habit: ${e.toString()}';
       notifyListeners();
