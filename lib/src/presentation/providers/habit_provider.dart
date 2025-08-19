@@ -20,16 +20,16 @@ class HabitProvider with ChangeNotifier {
   String? get error => _error;
 
   List<Habit> get activeHabits => _habits.where((h) => h.isActive).toList();
-  List<Habit> get completedTodayHabits => _habits.where((h) {
+  List<Habit> get pendingTodayHabits => _habits.where((habit) {
     final today = DateTime.now();
     final todayEpoch = today.difference(DateTime(1970, 1, 1)).inDays;
-    return h.completionHistory.contains(todayEpoch);
+    return habit.isActive && !habit.completionHistory.contains(todayEpoch);
   }).toList();
 
-  List<Habit> get pendingTodayHabits => _habits.where((h) {
+  List<Habit> get completedTodayHabits => _habits.where((habit) {
     final today = DateTime.now();
     final todayEpoch = today.difference(DateTime(1970, 1, 1)).inDays;
-    return h.isActive && !h.completionHistory.contains(todayEpoch);
+    return habit.isActive && habit.completionHistory.contains(todayEpoch);
   }).toList();
 
   Future<void> loadHabits() async {
@@ -38,15 +38,7 @@ class HabitProvider with ChangeNotifier {
 
     try {
       final habits = await _habitRepository.getAllHabits();
-      
-      // Add sample data if no habits exist
-      if (habits.isEmpty) {
-        await _addSampleHabits();
-        final sampleHabits = await _habitRepository.getAllHabits();
-        _habits = sampleHabits;
-      } else {
-        _habits = habits;
-      }
+      _habits = habits;
     } catch (e) {
       _error = 'Failed to load habits: $e';
     } finally {
@@ -55,65 +47,7 @@ class HabitProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _addSampleHabits() async {
-    final sampleHabits = [
-      Habit(
-        id: 'sample_meditation',
-        title: 'Morning Meditation',
-        description: 'Start your day with 10 minutes of mindfulness',
-        type: HabitType.daily,
-        category: HabitCategory.mindfulness,
-        difficulty: HabitDifficulty.easy,
-        targetCount: 1,
-        currentStreak: 3,
-        bestStreak: 7,
-        totalCompletions: 15,
-        createdAt: DateTime.now().subtract(const Duration(days: 15)),
-        lastCompletedAt: DateTime.now().subtract(const Duration(days: 1)),
-        completionHistory: List.generate(15, (index) => DateTime.now().subtract(Duration(days: index + 1)).difference(DateTime(1970, 1, 1)).inDays),
-        isActive: true,
-        xpValue: 15,
-      ),
-      Habit(
-        id: 'sample_reading',
-        title: 'Read 20 Pages',
-        description: 'Daily reading for personal growth',
-        type: HabitType.daily,
-        category: HabitCategory.learning,
-        difficulty: HabitDifficulty.medium,
-        targetCount: 1,
-        currentStreak: 5,
-        bestStreak: 5,
-        totalCompletions: 8,
-        createdAt: DateTime.now().subtract(const Duration(days: 8)),
-        lastCompletedAt: DateTime.now().subtract(const Duration(days: 1)),
-        completionHistory: List.generate(8, (index) => DateTime.now().subtract(Duration(days: index + 1)).difference(DateTime(1970, 1, 1)).inDays),
-        isActive: true,
-        xpValue: 20,
-      ),
-      Habit(
-        id: 'sample_exercise',
-        title: 'Exercise 30 Minutes',
-        description: 'Daily physical activity for health',
-        type: HabitType.daily,
-        category: HabitCategory.fitness,
-        difficulty: HabitDifficulty.hard,
-        targetCount: 1,
-        currentStreak: 2,
-        bestStreak: 4,
-        totalCompletions: 12,
-        createdAt: DateTime.now().subtract(const Duration(days: 20)),
-        lastCompletedAt: DateTime.now().subtract(const Duration(days: 1)),
-        completionHistory: List.generate(12, (index) => DateTime.now().subtract(Duration(days: index + 2)).difference(DateTime(1970, 1, 1)).inDays),
-        isActive: true,
-        xpValue: 30,
-      ),
-    ];
 
-    for (final habit in sampleHabits) {
-      await _habitRepository.createHabit(habit);
-    }
-  }
 
   Future<void> addHabit(Habit habit) async {
     try {
@@ -240,4 +174,6 @@ class HabitProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+
 }

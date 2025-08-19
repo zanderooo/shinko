@@ -3,7 +3,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const _databaseName = 'shinko.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
 
   // Table names
   static const tableHabits = 'habits';
@@ -46,7 +46,23 @@ class DatabaseHelper {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add missing columns to habits table
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnTargetCount INTEGER DEFAULT 1');
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnCurrentStreak INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnBestStreak INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnTotalCompletions INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnLastCompletedAt TEXT');
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnCompletionHistory TEXT');
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnIsActive INTEGER DEFAULT 1');
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnReminderTime TEXT');
+      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnXpValue INTEGER DEFAULT 10');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {

@@ -46,9 +46,9 @@ class UserProgressProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // For now, use mock data
-      _userProgress = _createSampleUserProgress();
-      _achievements = _createSampleAchievements();
+      // Start with fresh data (0 XP, level 1, no achievements)
+      _userProgress = _createFreshUserProgress();
+      _achievements = _createInitialAchievements();
     } catch (e) {
       _error = 'Failed to load user progress: $e';
     } finally {
@@ -57,20 +57,22 @@ class UserProgressProvider with ChangeNotifier {
     }
   }
 
-  UserProgress _createSampleUserProgress() {
+  UserProgress _createFreshUserProgress() {
     return UserProgress(
-      totalXP: 285,
-      currentLevel: 5,
-      dailyStreak: 7,
-      bestDailyStreak: 12,
-      totalHabitsCompleted: 35,
-      totalPerfectDays: 3,
+      totalXP: 0,
+      currentLevel: 1,
+      dailyStreak: 0,
+      bestDailyStreak: 0,
+      weeklyStreak: 0,
+      bestWeeklyStreak: 0,
+      totalHabitsCompleted: 0,
+      totalPerfectDays: 0,
       lastActiveDate: DateTime.now(),
-      createdAt: DateTime.now().subtract(const Duration(days: 30)),
+      createdAt: DateTime.now(),
     );
   }
 
-  List<Achievement> _createSampleAchievements() {
+  List<Achievement> _createInitialAchievements() {
     return [
       Achievement(
         id: 'first_habit',
@@ -80,11 +82,25 @@ class UserProgressProvider with ChangeNotifier {
         rarity: AchievementRarity.common,
         xpReward: 50,
         iconData: '🌱',
-        isUnlocked: true,
-        unlockedAt: DateTime.now().subtract(const Duration(days: 15)),
-        progress: 1,
+        isUnlocked: false,
+        unlockedAt: null,
+        progress: 0,
         target: 1,
-        createdAt: DateTime.now().subtract(const Duration(days: 15)),
+        createdAt: DateTime.now(),
+      ),
+      Achievement(
+        id: 'streak_3',
+        title: 'Three Day Streak',
+        description: 'Maintain a 3-day streak',
+        type: AchievementType.streak,
+        rarity: AchievementRarity.common,
+        xpReward: 30,
+        iconData: '🔥',
+        isUnlocked: false,
+        unlockedAt: null,
+        progress: 0,
+        target: 3,
+        createdAt: DateTime.now(),
       ),
       Achievement(
         id: 'streak_7',
@@ -94,30 +110,54 @@ class UserProgressProvider with ChangeNotifier {
         rarity: AchievementRarity.rare,
         xpReward: 100,
         iconData: '🔥',
-        isUnlocked: true,
-        unlockedAt: DateTime.now().subtract(const Duration(days: 2)),
-        progress: 7,
+        isUnlocked: false,
+        unlockedAt: null,
+        progress: 0,
         target: 7,
-        createdAt: DateTime.now().subtract(const Duration(days: 7)),
+        createdAt: DateTime.now(),
       ),
       Achievement(
-        id: 'habit_master',
+        id: 'habit_master_10',
+        title: 'Getting Started',
+        description: 'Complete 10 habits',
+        type: AchievementType.completion,
+        rarity: AchievementRarity.common,
+        xpReward: 75,
+        iconData: '🎯',
+        isUnlocked: false,
+        unlockedAt: null,
+        progress: 0,
+        target: 10,
+        createdAt: DateTime.now(),
+      ),
+      Achievement(
+        id: 'habit_master_50',
         title: 'Habit Master',
         description: 'Complete 50 habits',
-        type: AchievementType.level,
+        type: AchievementType.completion,
         rarity: AchievementRarity.rare,
         xpReward: 200,
         iconData: '👑',
         isUnlocked: false,
         unlockedAt: null,
-        progress: 35,
+        progress: 0,
         target: 50,
-        createdAt: DateTime.now().subtract(const Duration(days: 10)),
+        createdAt: DateTime.now(),
       ),
-
-
-
-
+      Achievement(
+        id: 'level_5',
+        title: 'Rising Star',
+        description: 'Reach level 5',
+        type: AchievementType.level,
+        rarity: AchievementRarity.rare,
+        xpReward: 150,
+        iconData: '⭐',
+        isUnlocked: false,
+        unlockedAt: null,
+        progress: 0,
+        target: 5,
+        createdAt: DateTime.now(),
+      ),
     ];
   }
 
