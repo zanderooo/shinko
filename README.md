@@ -1,52 +1,61 @@
-# Shinkō (進行)
+<div align="center">
+  <img src="assets/icon.png" alt="Shinkō" width="100" height="100">
+  
+  # Shinkō
+  ### 進行 — *progress through small wins*
+  
+  <p align="center">
+    <em>Transform your habits into an elegant RPG experience</em>
+  </p>
+  
+  [![Flutter](https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white)](https://flutter.dev)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg?style=flat)](https://opensource.org/licenses/MIT)
+  
+</div>
 
-Make progress feel good. Shinkō turns your habits into streaks, levels, and tiny wins that snowball.
+---
 
-## What you can do right now
+## What makes Shinkō different?
 
-- Create habits and build streaks without worrying about “XP exploits” — completion grants XP once per day, unchecking removes it
-- See your progress in the Journey tab with real XP graphs (no fake data)
-- Complete daily quests (auto-generated, 3–5 per day) and unlock the Mystery Chest by finishing all habits
-- Export/Import your data as JSON from Settings so you can switch devices safely
-- Explore the Style tab and equip cosmetics you unlock (themes, icons, trails)
+**No XP exploits.** Complete a habit once per day, earn XP once. Uncheck it, lose the XP. Simple, honest progress.
 
-## Highlights
+**Real streaks.** Your 30-day streak means 30 consecutive days, not 30 random completions.
 
-- Anti-spam XP with proper uncheck handling
-- Streaks and best streak tracking
-- Daily quests + bonus chest (XP reward), compact UI on the dashboard
-- Style tab with cosmetic unlock/equip storage (applied theming is coming next)
-- Export/Import backups (local JSON via share & file picker)
-- Smooth animations and a clean Japanese-inspired dark UI
+**Mystery chests.** Complete all your daily habits to unlock bonus rewards. Miss one? No chest.
+
+---
+
+## The experience
+
+- **Daily quests** that adapt to your habits
+- **Streak freezes** for when life happens  
+- **Japanese-inspired dark UI** with smooth animations
+- **Local-first** with JSON export/import
+- **Cross-platform** — Android, iOS, Web, Desktop
+
+---
 
 ## Get started
 
 ```bash
+git clone https://github.com/zanderooo/shinko.git
+cd shinko
 flutter pub get
 flutter run
 ```
 
-Works best on Android right now. iOS/Web should build, but the primary target is Android.
+*Requires Flutter ≥3.9.0*
 
-## Power-user notes
+---
 
-- Data is stored locally (SQLite). Back up via Settings → Export. Restore via Settings → Import.
-- Quests regenerate each day and progress is based on today’s completions.
-- Bonus chest appears when all active habits are done. Claim it for extra XP (and soon: a cosmetic).
+## Philosophy
 
-## Contributing
+Progress isn't about perfection. It's about showing up, day after day, and celebrating the small wins that compound into something meaningful.
 
-PRs are welcome: small, focused, and with a quick note on the UX thinking behind the change.
+Shinkō makes that journey feel good.
 
-Ideas that would help:
-- Confetti/haptics wired into every meaningful event
-- Notification nudges (streak save, “one away from chest”, weekly review)
-- Applying equipped themes/icons globally
+---
 
-## License
-
-MIT — see `LICENSE`.
-
-–––
-
-Made with Flutter. 進行 — progress through small wins.
+<div align="center">
+  <sub>Built with Flutter • Inspired by Japanese minimalism</sub>
+</div>
