@@ -12,10 +12,15 @@ class HabitRepositoryImpl implements HabitRepository {
   @override
   Future<List<Habit>> getAllHabits() async {
     final db = await _databaseHelper.database;
+    // debug: loading all habits
     final List<Map<String, dynamic>> maps = await db.query(
       DatabaseHelper.tableHabits,
       orderBy: '${DatabaseHelper.columnCreatedAt} DESC',
     );
+    // debug: found habits count
+    if (maps.isNotEmpty) {
+      // debug: first habit map for diagnostics
+    }
     return maps.map((map) => HabitModel.fromJson(map).toEntity()).toList();
   }
 
@@ -34,11 +39,13 @@ class HabitRepositoryImpl implements HabitRepository {
   @override
   Future<void> createHabit(Habit habit) async {
     final db = await _databaseHelper.database;
+    // debug: creating habit
     await db.insert(
       DatabaseHelper.tableHabits,
       HabitModel.fromEntity(habit).toJson(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    // debug: habit inserted
   }
 
   @override
@@ -63,17 +70,21 @@ class HabitRepositoryImpl implements HabitRepository {
   }
 
   @override
-  Future<void> completeHabit(String id, DateTime date) async {
+  Future<bool> completeHabit(String id, DateTime date) async {
     final habit = await getHabitById(id);
-    if (habit == null) return;
+    if (habit == null) return false;
 
     
     final int daySinceEpoch = date.difference(DateTime(1970, 1, 1)).inDays;
     final updatedHistory = List<int>.from(habit.completionHistory);
     
-    if (!updatedHistory.contains(daySinceEpoch)) {
+    final alreadyCompletedToday = updatedHistory.contains(daySinceEpoch);
+    if (!alreadyCompletedToday) {
       updatedHistory.add(daySinceEpoch);
       updatedHistory.sort();
+    } else {
+      // No-op if already completed today
+      return false;
     }
 
     final updatedHabit = habit.copyWith(
@@ -85,12 +96,13 @@ class HabitRepositoryImpl implements HabitRepository {
     );
 
     await updateHabit(updatedHabit);
+    return true;
   }
 
   @override
-  Future<void> uncompleteHabit(String id, DateTime date) async {
+  Future<bool> uncompleteHabit(String id, DateTime date) async {
     final habit = await getHabitById(id);
-    if (habit == null) return;
+    if (habit == null) return false;
 
     final int daySinceEpoch = date.difference(DateTime(1970, 1, 1)).inDays;
     final updatedHistory = List<int>.from(habit.completionHistory)
@@ -104,6 +116,7 @@ class HabitRepositoryImpl implements HabitRepository {
     );
 
     await updateHabit(updatedHabit);
+    return true;
   }
 
   @override

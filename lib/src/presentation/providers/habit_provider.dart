@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shinko/src/domain/entities/habit.dart';
 import 'package:shinko/src/domain/repositories/habit_repository.dart';
 import 'package:shinko/src/presentation/providers/user_progress_provider.dart';
+import 'package:shinko/src/presentation/providers/quest_provider.dart';
 import 'package:shinko/src/core/navigator_key.dart';
 
 class HabitProvider with ChangeNotifier {
@@ -39,6 +40,18 @@ class HabitProvider with ChangeNotifier {
     try {
       final habits = await _habitRepository.getAllHabits();
       _habits = habits;
+      // Recalculate user progress from persisted habits
+      final buildContext = navigatorKey.currentContext;
+      final userProgressProvider = buildContext != null && buildContext.mounted
+          ? Provider.of<UserProgressProvider>(buildContext, listen: false)
+          : null;
+      final questProvider = buildContext != null && buildContext.mounted
+          ? Provider.of<QuestProvider>(buildContext, listen: false)
+          : null;
+      if (userProgressProvider != null) {
+        await userProgressProvider.recalculateFromHabits(_habits);
+      }
+      questProvider?.onHabitsChanged();
     } catch (e) {
       _error = 'Failed to load habits: $e';
     } finally {
@@ -84,18 +97,21 @@ class HabitProvider with ChangeNotifier {
       final habit = getHabitById(id);
       if (habit == null) return;
 
-      await _habitRepository.completeHabit(id, DateTime.now());
+      // Capture provider before async gaps to avoid using BuildContext after awaits
+      final buildContext = navigatorKey.currentContext;
+      UserProgressProvider? userProgressProvider;
+      if (buildContext != null && buildContext.mounted) {
+        userProgressProvider = Provider.of<UserProgressProvider>(buildContext, listen: false);
+      }
+
+      final added = await _habitRepository.completeHabit(id, DateTime.now());
       await loadHabits();
       
       // Award XP with animation
-      final context = navigatorKey.currentContext;
-      if (context != null) {
-        final userProgressProvider = 
-            Provider.of<UserProgressProvider>(context, listen: false);
+      if (added && userProgressProvider != null) {
         await userProgressProvider.addXPWithAnimation(habit.xpValue, 'habit_completion');
-        
-        // Update habit completion count
         await userProgressProvider.incrementHabitCompletion();
+        // TODO: trigger confetti/haptics/sound here; placeholder hook
       }
       
     } catch (e) {
@@ -106,12 +122,90 @@ class HabitProvider with ChangeNotifier {
 
   Future<void> uncompleteHabit(String id) async {
     try {
-      await _habitRepository.uncompleteHabit(id, DateTime.now());
+      final removed = await _habitRepository.uncompleteHabit(id, DateTime.now());
       await loadHabits();
+      final buildContext = navigatorKey.currentContext;
+      if (removed && buildContext != null && buildContext.mounted) {
+        final habit = getHabitById(id);
+        if (habit != null) {
+          final userProgressProvider = Provider.of<UserProgressProvider>(buildContext, listen: false);
+          await userProgressProvider.addXP(-habit.xpValue, 'habit_uncomplete');
+        }
+      }
     } catch (e) {
       _error = 'Failed to uncomplete habit: ${e.toString()}';
       notifyListeners();
     }
+  }
+
+  Future<bool> useStreakFreeze(String id) async {
+    try {
+      final habit = getHabitById(id);
+      if (habit == null) return false;
+
+      // Check if streak freeze is available
+      if (habit.streakFreezes <= 0) return false;
+
+      // Check if already used today
+      final today = DateTime.now();
+      if (habit.lastStreakFreezeUsed != null && 
+          habit.lastStreakFreezeUsed!.year == today.year &&
+          habit.lastStreakFreezeUsed!.month == today.month &&
+          habit.lastStreakFreezeUsed!.day == today.day) {
+        return false;
+      }
+
+      // Use streak freeze
+      final updatedHabit = habit.copyWith(
+        streakFreezes: habit.streakFreezes - 1,
+        lastStreakFreezeUsed: today,
+      );
+
+      await _habitRepository.updateHabit(updatedHabit);
+      await loadHabits();
+      
+      return true;
+    } catch (e) {
+      _error = 'Failed to use streak freeze: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> awardStreakFreezes(String id, int count) async {
+    try {
+      final habit = getHabitById(id);
+      if (habit == null) return;
+
+      final updatedHabit = habit.copyWith(
+        streakFreezes: habit.streakFreezes + count,
+      );
+
+      await _habitRepository.updateHabit(updatedHabit);
+      await loadHabits();
+    } catch (e) {
+      _error = 'Failed to award streak freezes: ${e.toString()}';
+      notifyListeners();
+    }
+  }
+
+  bool canUseStreakFreeze(String habitId) {
+    final habit = getHabitById(habitId);
+    if (habit == null) return false;
+
+    // Check if streak freeze is available
+    if (habit.streakFreezes <= 0) return false;
+
+    // Check if already used today
+    final today = DateTime.now();
+    if (habit.lastStreakFreezeUsed != null && 
+        habit.lastStreakFreezeUsed!.year == today.year &&
+        habit.lastStreakFreezeUsed!.month == today.month &&
+        habit.lastStreakFreezeUsed!.day == today.day) {
+      return false;
+    }
+
+    return true;
   }
 
   Habit? getHabitById(String id) {
@@ -168,6 +262,18 @@ class HabitProvider with ChangeNotifier {
     ).length;
     
     return completedHabits / activeHabitsForDay.length;
+  }
+
+  int getTotalXPForDay(DateTime date) {
+    if (_habits.isEmpty) return 0;
+    final dayEpoch = date.difference(DateTime(1970, 1, 1)).inDays;
+    int total = 0;
+    for (final habit in _habits) {
+      if (habit.completionHistory.contains(dayEpoch)) {
+        total += habit.xpValue;
+      }
+    }
+    return total;
   }
 
   void clearError() {

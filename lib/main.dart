@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:shinko/src/presentation/providers/habit_provider.dart';
 import 'package:shinko/src/presentation/providers/user_progress_provider.dart';
 import 'package:shinko/src/presentation/providers/motivation_provider.dart';
+import 'package:shinko/src/presentation/providers/tomorrow_message_provider.dart';
+import 'package:shinko/src/presentation/providers/quest_provider.dart';
+import 'package:shinko/src/presentation/providers/cosmetic_provider.dart';
 import 'package:shinko/src/presentation/screens/main_screen.dart';
 import 'package:shinko/src/presentation/screens/onboarding_screen.dart';
 import 'package:shinko/src/presentation/theme/app_theme.dart';
@@ -27,6 +30,12 @@ class ShinkoApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => UserProgressProvider()),
         ChangeNotifierProvider(create: (_) => MotivationProvider()),
+        ChangeNotifierProvider(create: (_) => TomorrowMessageProvider()),
+        ChangeNotifierProvider(create: (_) => CosmeticProvider()..load()),
+        ChangeNotifierProxyProvider<HabitProvider, QuestProvider>(
+          create: (context) => QuestProvider(context.read<HabitProvider>()),
+          update: (context, habits, previous) => (previous ?? QuestProvider(habits))..onHabitsChanged(),
+        ),
       ],
       child: MaterialApp(
         title: 'Shinkō',
@@ -64,6 +73,8 @@ class _SplashScreenState extends State<SplashScreen> {
     
     final showOnboarding = await OnboardingHelper.shouldShowOnboarding();
     
+    if (!mounted) return;
+
     if (showOnboarding) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const OnboardingScreen()),

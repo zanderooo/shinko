@@ -44,6 +44,8 @@ class Habit {
   final bool isActive;
   final String? reminderTime;
   final int xpValue;
+  final int streakFreezes;
+  final DateTime? lastStreakFreezeUsed;
 
   const Habit({
     required this.id,
@@ -62,6 +64,8 @@ class Habit {
     this.isActive = true,
     this.reminderTime,
     required this.xpValue,
+    this.streakFreezes = 0,
+    this.lastStreakFreezeUsed,
   });
 
   Habit copyWith({
@@ -81,6 +85,8 @@ class Habit {
     bool? isActive,
     String? reminderTime,
     int? xpValue,
+    int? streakFreezes,
+    DateTime? lastStreakFreezeUsed,
   }) {
     return Habit(
       id: id ?? this.id,
@@ -99,6 +105,8 @@ class Habit {
       isActive: isActive ?? this.isActive,
       reminderTime: reminderTime ?? this.reminderTime,
       xpValue: xpValue ?? this.xpValue,
+      streakFreezes: streakFreezes ?? this.streakFreezes,
+      lastStreakFreezeUsed: lastStreakFreezeUsed ?? this.lastStreakFreezeUsed,
     );
   }
 
@@ -141,6 +149,8 @@ class Habit {
         completionHistory.hashCode ^
         isActive.hashCode ^
         reminderTime.hashCode ^
-        xpValue.hashCode;
+        xpValue.hashCode ^
+        streakFreezes.hashCode ^
+        lastStreakFreezeUsed.hashCode;
   }
 }

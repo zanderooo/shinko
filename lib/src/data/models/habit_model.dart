@@ -18,9 +18,30 @@ class HabitModel extends Habit {
     super.isActive,
     super.reminderTime,
     required super.xpValue,
+    super.streakFreezes,
+    super.lastStreakFreezeUsed,
   });
 
   factory HabitModel.fromJson(Map<String, dynamic> json) {
+    List<int> parseCompletionHistory(dynamic historyData) {
+      if (historyData == null) return [];
+      if (historyData is List) {
+        return historyData.map((e) => e as int).toList();
+      }
+      if (historyData is String) {
+        try {
+          if (historyData == '[]' || historyData.isEmpty) return [];
+          // Handle string format like "1,2,3" or "[1,2,3]"
+          final cleaned = historyData.replaceAll('[', '').replaceAll(']', '');
+          if (cleaned.trim().isEmpty) return [];
+          return cleaned.split(',').map((e) => int.tryParse(e.trim()) ?? 0).where((e) => e > 0).toList();
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    }
+
     return HabitModel(
       id: json['id'] as String,
       title: json['title'] as String,
@@ -38,16 +59,16 @@ class HabitModel extends Habit {
           : json['last_completed_at'] != null
               ? DateTime.parse(json['last_completed_at'] as String)
               : null,
-      completionHistory: (json['completionHistory'] as List<dynamic>?)
-              ?.map((e) => e as int)
-              .toList() ??
-          (json['completion_history'] as List<dynamic>?)
-              ?.map((e) => e as int)
-              .toList() ??
-          const [],
-      isActive: json['isActive'] as bool? ?? json['is_active'] as bool? ?? true,
+      completionHistory: parseCompletionHistory(json['completionHistory'] ?? json['completion_history']),
+      isActive: (json['isActive'] as int? ?? json['is_active'] as int? ?? 1) == 1,
       reminderTime: json['reminderTime'] as String? ?? json['reminder_time'] as String?,
       xpValue: json['xpValue'] as int? ?? json['xp_value'] as int? ?? 10,
+      streakFreezes: json['streakFreezes'] as int? ?? json['streak_freezes'] as int? ?? 0,
+      lastStreakFreezeUsed: json['lastStreakFreezeUsed'] != null
+          ? DateTime.parse(json['lastStreakFreezeUsed'] as String)
+          : json['last_streak_freeze_used'] != null
+              ? DateTime.parse(json['last_streak_freeze_used'] as String)
+              : null,
     );
   }
 
@@ -65,10 +86,12 @@ class HabitModel extends Habit {
       'total_completions': totalCompletions,
       'created_at': createdAt.toIso8601String(),
       'last_completed_at': lastCompletedAt?.toIso8601String(),
-      'completion_history': completionHistory,
-      'is_active': isActive,
+      'completion_history': completionHistory.join(','),
+      'is_active': isActive ? 1 : 0,
       'reminder_time': reminderTime,
       'xp_value': xpValue,
+      'streak_freezes': streakFreezes,
+      'last_streak_freeze_used': lastStreakFreezeUsed?.toIso8601String(),
     };
   }
 
@@ -90,6 +113,8 @@ class HabitModel extends Habit {
       isActive: habit.isActive,
       reminderTime: habit.reminderTime,
       xpValue: habit.xpValue,
+      streakFreezes: habit.streakFreezes,
+      lastStreakFreezeUsed: habit.lastStreakFreezeUsed,
     );
   }
 
@@ -111,6 +136,8 @@ class HabitModel extends Habit {
       isActive: isActive,
       reminderTime: reminderTime,
       xpValue: xpValue,
+      streakFreezes: streakFreezes,
+      lastStreakFreezeUsed: lastStreakFreezeUsed,
     );
   }
 }

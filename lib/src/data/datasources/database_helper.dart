@@ -1,9 +1,10 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
+import 'dart:io' show Platform;
 
 class DatabaseHelper {
   static const _databaseName = 'shinko.db';
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3;
 
   // Table names
   static const tableHabits = 'habits';
@@ -27,6 +28,8 @@ class DatabaseHelper {
   static const columnIsActive = 'is_active';
   static const columnReminderTime = 'reminder_time';
   static const columnXpValue = 'xp_value';
+  static const columnStreakFreezes = 'streak_freezes';
+  static const columnLastStreakFreezeUsed = 'last_streak_freeze_used';
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -40,6 +43,12 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
+    // Initialize database factory for Windows desktop
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+    
     final documentsDirectory = await getDatabasesPath();
     final path = join(documentsDirectory, _databaseName);
     return await openDatabase(
@@ -51,17 +60,28 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // Helper to add a column only if it doesn't already exist
+    Future<void> addColumnIfMissing(String table, String column, String definition) async {
+      final exists = await _columnExists(db, table, column);
+      if (!exists) {
+        await db.execute('ALTER TABLE $table ADD COLUMN $definition');
+      }
+    }
+
     if (oldVersion < 2) {
-      // Add missing columns to habits table
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnTargetCount INTEGER DEFAULT 1');
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnCurrentStreak INTEGER DEFAULT 0');
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnBestStreak INTEGER DEFAULT 0');
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnTotalCompletions INTEGER DEFAULT 0');
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnLastCompletedAt TEXT');
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnCompletionHistory TEXT');
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnIsActive INTEGER DEFAULT 1');
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnReminderTime TEXT');
-      await db.execute('ALTER TABLE $tableHabits ADD COLUMN $columnXpValue INTEGER DEFAULT 10');
+      await addColumnIfMissing(tableHabits, columnTargetCount, '$columnTargetCount INTEGER DEFAULT 1');
+      await addColumnIfMissing(tableHabits, columnCurrentStreak, '$columnCurrentStreak INTEGER DEFAULT 0');
+      await addColumnIfMissing(tableHabits, columnBestStreak, '$columnBestStreak INTEGER DEFAULT 0');
+      await addColumnIfMissing(tableHabits, columnTotalCompletions, '$columnTotalCompletions INTEGER DEFAULT 0');
+      await addColumnIfMissing(tableHabits, columnLastCompletedAt, '$columnLastCompletedAt TEXT');
+      await addColumnIfMissing(tableHabits, columnCompletionHistory, '$columnCompletionHistory TEXT');
+      await addColumnIfMissing(tableHabits, columnIsActive, '$columnIsActive INTEGER DEFAULT 1');
+      await addColumnIfMissing(tableHabits, columnReminderTime, '$columnReminderTime TEXT');
+      await addColumnIfMissing(tableHabits, columnXpValue, '$columnXpValue INTEGER NOT NULL');
+    }
+    if (oldVersion < 3) {
+      await addColumnIfMissing(tableHabits, columnStreakFreezes, '$columnStreakFreezes INTEGER DEFAULT 0');
+      await addColumnIfMissing(tableHabits, columnLastStreakFreezeUsed, '$columnLastStreakFreezeUsed TEXT');
     }
   }
 
@@ -83,7 +103,9 @@ class DatabaseHelper {
         $columnCompletionHistory TEXT,
         $columnIsActive INTEGER DEFAULT 1,
         $columnReminderTime TEXT,
-        $columnXpValue INTEGER NOT NULL
+        $columnXpValue INTEGER NOT NULL,
+        $columnStreakFreezes INTEGER DEFAULT 0,
+        $columnLastStreakFreezeUsed TEXT
       )
     ''');
 
@@ -213,6 +235,15 @@ class DatabaseHelper {
     for (final achievement in achievements) {
       await db.insert(tableAchievements, achievement);
     }
+  }
+
+  Future<bool> _columnExists(Database db, String table, String column) async {
+    final result = await db.rawQuery('PRAGMA table_info($table)');
+    for (final row in result) {
+      final name = row['name'] as String?;
+      if (name == column) return true;
+    }
+    return false;
   }
 
   Future<void> close() async {

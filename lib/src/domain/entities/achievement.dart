@@ -30,6 +30,7 @@ class Achievement {
   final int progress;
   final int target;
   final DateTime createdAt;
+  final int streakFreezeReward;
 
   const Achievement({
     required this.id,
@@ -44,6 +45,7 @@ class Achievement {
     this.progress = 0,
     required this.target,
     required this.createdAt,
+    this.streakFreezeReward = 0,
   });
 
   Achievement copyWith({
@@ -59,6 +61,7 @@ class Achievement {
     int? progress,
     int? target,
     DateTime? createdAt,
+    int? streakFreezeReward,
   }) {
     return Achievement(
       id: id ?? this.id,
@@ -73,6 +76,7 @@ class Achievement {
       progress: progress ?? this.progress,
       target: target ?? this.target,
       createdAt: createdAt ?? this.createdAt,
+      streakFreezeReward: streakFreezeReward ?? this.streakFreezeReward,
     );
   }
 
@@ -111,7 +115,8 @@ class Achievement {
         other.unlockedAt == unlockedAt &&
         other.progress == progress &&
         other.target == target &&
-        other.createdAt == createdAt;
+        other.createdAt == createdAt &&
+        other.streakFreezeReward == streakFreezeReward;
   }
 
   @override
@@ -127,6 +132,7 @@ class Achievement {
         unlockedAt.hashCode ^
         progress.hashCode ^
         target.hashCode ^
-        createdAt.hashCode;
+        createdAt.hashCode ^
+        streakFreezeReward.hashCode;
   }
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shinko/src/domain/entities/user_progress.dart';
+import 'package:shinko/src/domain/entities/habit.dart';
 import 'package:shinko/src/domain/entities/achievement.dart';
+import 'package:shinko/src/core/navigator_key.dart';
+import 'package:shinko/src/presentation/providers/habit_provider.dart';
 
 class UserProgressProvider with ChangeNotifier {
   UserProgress _userProgress = UserProgress(
@@ -117,6 +121,36 @@ class UserProgressProvider with ChangeNotifier {
         createdAt: DateTime.now(),
       ),
       Achievement(
+        id: 'streak_14',
+        title: 'Fortnight Fighter',
+        description: 'Maintain a 14-day streak',
+        type: AchievementType.streak,
+        rarity: AchievementRarity.epic,
+        xpReward: 200,
+        iconData: '❄️',
+        streakFreezeReward: 1,
+        isUnlocked: false,
+        unlockedAt: null,
+        progress: 0,
+        target: 14,
+        createdAt: DateTime.now(),
+      ),
+      Achievement(
+        id: 'streak_30',
+        title: 'Monthly Master',
+        description: 'Maintain a 30-day streak',
+        type: AchievementType.streak,
+        rarity: AchievementRarity.legendary,
+        xpReward: 500,
+        iconData: '👑',
+        streakFreezeReward: 3,
+        isUnlocked: false,
+        unlockedAt: null,
+        progress: 0,
+        target: 30,
+        createdAt: DateTime.now(),
+      ),
+      Achievement(
         id: 'habit_master_10',
         title: 'Getting Started',
         description: 'Complete 10 habits',
@@ -138,6 +172,7 @@ class UserProgressProvider with ChangeNotifier {
         rarity: AchievementRarity.rare,
         xpReward: 200,
         iconData: '👑',
+        streakFreezeReward: 1,
         isUnlocked: false,
         unlockedAt: null,
         progress: 0,
@@ -152,10 +187,26 @@ class UserProgressProvider with ChangeNotifier {
         rarity: AchievementRarity.rare,
         xpReward: 150,
         iconData: '⭐',
+        streakFreezeReward: 1,
         isUnlocked: false,
         unlockedAt: null,
         progress: 0,
         target: 5,
+        createdAt: DateTime.now(),
+      ),
+      Achievement(
+        id: 'level_10',
+        title: 'Level Legend',
+        description: 'Reach level 10',
+        type: AchievementType.level,
+        rarity: AchievementRarity.epic,
+        xpReward: 300,
+        iconData: '💫',
+        streakFreezeReward: 2,
+        isUnlocked: false,
+        unlockedAt: null,
+        progress: 0,
+        target: 10,
         createdAt: DateTime.now(),
       ),
     ];
@@ -310,6 +361,15 @@ class UserProgressProvider with ChangeNotifier {
       // Add XP reward
       await addXP(achievement.xpReward, 'achievement_${achievement.id}');
       
+      // Award streak freezes if applicable
+      if (achievement.streakFreezeReward > 0) {
+        final context = navigatorKey.currentContext;
+        if (context != null && context.mounted) {
+          final habitProvider = Provider.of<HabitProvider>(context, listen: false);
+          await habitProvider.awardStreakFreezes(achievement.streakFreezeReward.toString(), achievement.streakFreezeReward);
+        }
+      }
+      
       notifyListeners();
     }
   }
@@ -319,27 +379,28 @@ class UserProgressProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  double getXPForDay(DateTime date) {
-    // This is a placeholder. In a real app, you would fetch this from a repository.
-    // For now, let's generate some sample data.
-    final day = date.weekday;
-    switch (day) {
-      case DateTime.monday:
-        return 50;
-      case DateTime.tuesday:
-        return 75;
-      case DateTime.wednesday:
-        return 60;
-      case DateTime.thursday:
-        return 90;
-      case DateTime.friday:
-        return 120;
-      case DateTime.saturday:
-        return 150;
-      case DateTime.sunday:
-        return 100;
-      default:
-        return 0;
+  double getXPForDay(BuildContext context, DateTime date) {
+    final habits = Provider.of<HabitProvider>(context, listen: false);
+    return habits.getTotalXPForDay(date).toDouble();
+  }
+
+  Future<void> recalculateFromHabits(List<Habit> habits) async {
+    int totalXp = 0;
+    int totalCompletions = 0;
+    for (final habit in habits) {
+      totalXp += habit.xpValue * habit.totalCompletions;
+      totalCompletions += habit.totalCompletions;
     }
+
+    final newLevel = _calculateLevel(totalXp);
+    final newXpToNext = UserProgress.calculateXPForNextLevel(newLevel);
+
+    _userProgress = _userProgress.copyWith(
+      totalXP: totalXp,
+      currentLevel: newLevel,
+      xpToNextLevel: newXpToNext,
+      totalHabitsCompleted: totalCompletions,
+    );
+    notifyListeners();
   }
 }

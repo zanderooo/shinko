@@ -167,59 +167,84 @@ class AppTheme {
   }
 
   static BoxDecoration get glassCardDecoration => BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: _cardColor.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(24),
+        color: _cardColor.withValues(alpha: 0.2),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: Colors.white.withValues(alpha: 0.15),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: _primaryColor.withValues(alpha: 0.1),
-            blurRadius: 20,
-            spreadRadius: 2,
+            color: _primaryColor.withValues(alpha: 0.15),
+            blurRadius: 32,
+            spreadRadius: 1,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 24,
+            spreadRadius: -8,
+            offset: const Offset(0, 4),
           ),
         ],
       );
 
   static BoxDecoration get neonCardDecoration => BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            _primaryColor.withValues(alpha: 0.2),
-            _secondaryColor.withValues(alpha: 0.1),
+            _primaryColor.withValues(alpha: 0.3),
+            _secondaryColor.withValues(alpha: 0.2),
+            _primaryColor.withValues(alpha: 0.1),
           ],
+          stops: const [0.0, 0.5, 1.0],
         ),
         border: Border.all(
-          color: _primaryColor.withValues(alpha: 0.3),
+          color: _primaryColor.withValues(alpha: 0.4),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: _primaryColor.withValues(alpha: 0.2),
-            blurRadius: 15,
+            color: _primaryColor.withValues(alpha: 0.4),
+            blurRadius: 24,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: _secondaryColor.withValues(alpha: 0.2),
+            blurRadius: 16,
             spreadRadius: 1,
+            offset: const Offset(0, 2),
           ),
         ],
       );
 
   static BoxDecoration get streakCardDecoration => BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            _warningColor.withValues(alpha: 0.3),
+            _warningColor.withValues(alpha: 0.4),
+            Colors.orange.withValues(alpha: 0.3),
             _primaryColor.withValues(alpha: 0.2),
           ],
+          stops: const [0.0, 0.4, 1.0],
         ),
         boxShadow: [
           BoxShadow(
-            color: _warningColor.withValues(alpha: 0.2),
+            color: _warningColor.withValues(alpha: 0.3),
+            blurRadius: 20,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.orange.withValues(alpha: 0.2),
             blurRadius: 12,
             spreadRadius: 1,
+            offset: const Offset(0, 2),
           ),
         ],
       );
