@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shinko/src/presentation/screens/daily_dashboard_screen.dart';
 import 'package:shinko/src/presentation/screens/journey_screen.dart';
+import 'package:shinko/src/presentation/screens/you_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -21,6 +22,7 @@ class _MainScreenState extends State<MainScreen> {
     _widgetOptions = const <Widget>[
       DailyDashboardScreen(),
       JourneyScreen(),
+      YouScreen(),
     ];
   }
 
@@ -46,6 +48,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.explore),
             label: 'Journey',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'You',
           ),
         ],
         currentIndex: _selectedIndex,

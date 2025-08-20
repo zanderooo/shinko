@@ -13,7 +13,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: ColorScheme.dark(
+      colorScheme: const ColorScheme.dark(
         primary: _primaryColor,
         secondary: _secondaryColor,
         surface: _surfaceColor,
@@ -44,99 +44,28 @@ class AppTheme {
         ),
       ),
       textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          color: Colors.white,
-          fontSize: 57,
-          fontWeight: FontWeight.w400,
-          letterSpacing: -0.25,
-        ),
-        displayMedium: TextStyle(
-          color: Colors.white,
-          fontSize: 45,
-          fontWeight: FontWeight.w400,
-        ),
-        displaySmall: TextStyle(
-          color: Colors.white,
-          fontSize: 36,
-          fontWeight: FontWeight.w400,
-        ),
-        headlineLarge: TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.w400,
-        ),
-        headlineMedium: TextStyle(
-          color: Colors.white,
-          fontSize: 28,
-          fontWeight: FontWeight.w400,
-        ),
-        headlineSmall: TextStyle(
-          color: Colors.white,
-          fontSize: 24,
-          fontWeight: FontWeight.w400,
-        ),
-        titleLarge: TextStyle(
-          color: Colors.white,
-          fontSize: 22,
-          fontWeight: FontWeight.w400,
-        ),
-        titleMedium: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.15,
-        ),
-        titleSmall: TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.1,
-        ),
-        bodyLarge: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          letterSpacing: 0.5,
-        ),
-        bodyMedium: TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-          letterSpacing: 0.25,
-        ),
-        bodySmall: TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w400,
-          letterSpacing: 0.4,
-        ),
-        labelLarge: TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.1,
-        ),
-        labelMedium: TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.5,
-        ),
-        labelSmall: TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.5,
-        ),
+        displayLarge: TextStyle(color: Colors.white, fontSize: 57, fontWeight: FontWeight.w400, letterSpacing: -0.25),
+        displayMedium: TextStyle(color: Colors.white, fontSize: 45, fontWeight: FontWeight.w400),
+        displaySmall: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w400),
+        headlineLarge: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w400),
+        headlineMedium: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w400),
+        headlineSmall: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w400),
+        titleLarge: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w400),
+        titleMedium: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 0.15),
+        titleSmall: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+        bodyLarge: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w400, letterSpacing: 0.5),
+        bodyMedium: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: 0.25),
+        bodySmall: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w400, letterSpacing: 0.4),
+        labelLarge: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+        labelMedium: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.5),
+        labelSmall: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.5),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: _primaryColor,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
       ),
@@ -169,10 +98,7 @@ class AppTheme {
   static BoxDecoration get glassCardDecoration => BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         color: _cardColor.withValues(alpha: 0.2),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.15),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
         boxShadow: [
           BoxShadow(
             color: _primaryColor.withValues(alpha: 0.15),
@@ -201,10 +127,7 @@ class AppTheme {
           ],
           stops: const [0.0, 0.5, 1.0],
         ),
-        border: Border.all(
-          color: _primaryColor.withValues(alpha: 0.4),
-          width: 1,
-        ),
+        border: Border.all(color: _primaryColor.withValues(alpha: 0.4), width: 1),
         boxShadow: [
           BoxShadow(
             color: _primaryColor.withValues(alpha: 0.4),
@@ -249,40 +172,11 @@ class AppTheme {
         ],
       );
 
-  static TextStyle get titleLarge => const TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.w600,
-        color: Colors.white,
-        letterSpacing: 0.5,
-      );
-
-  static TextStyle get titleMedium => const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w500,
-        color: Colors.white,
-        letterSpacing: 0.25,
-      );
-
-  static TextStyle get bodyLarge => const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: Colors.white,
-        letterSpacing: 0.5,
-      );
-
-  static TextStyle get bodyMedium => const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: Colors.white70,
-        letterSpacing: 0.25,
-      );
-
-  static TextStyle get caption => const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-        color: Colors.white54,
-        letterSpacing: 0.4,
-      );
+  static const titleLarge = TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.5);
+  static const titleMedium = TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.white, letterSpacing: 0.25);
+  static const bodyLarge = TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Colors.white, letterSpacing: 0.5);
+  static const bodyMedium = TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: Colors.white70, letterSpacing: 0.25);
+  static const caption = TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: Colors.white54, letterSpacing: 0.4);
 
   static const gradientPrimary = LinearGradient(
     colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],

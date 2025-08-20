@@ -40,17 +40,10 @@ class HabitProvider with ChangeNotifier {
     try {
       final habits = await _habitRepository.getAllHabits();
       _habits = habits;
-      // Recalculate user progress from persisted habits
       final buildContext = navigatorKey.currentContext;
-      final userProgressProvider = buildContext != null && buildContext.mounted
-          ? Provider.of<UserProgressProvider>(buildContext, listen: false)
-          : null;
       final questProvider = buildContext != null && buildContext.mounted
           ? Provider.of<QuestProvider>(buildContext, listen: false)
           : null;
-      if (userProgressProvider != null) {
-        await userProgressProvider.recalculateFromHabits(_habits);
-      }
       questProvider?.onHabitsChanged();
     } catch (e) {
       _error = 'Failed to load habits: $e';
@@ -66,6 +59,12 @@ class HabitProvider with ChangeNotifier {
     try {
       await _habitRepository.createHabit(habit);
       await loadHabits();
+
+      final buildContext = navigatorKey.currentContext;
+      if (buildContext != null && buildContext.mounted) {
+        final userProgressProvider = Provider.of<UserProgressProvider>(buildContext, listen: false);
+        await userProgressProvider.incrementHabitCompletion(habit.category);
+      }
     } catch (e) {
       _error = 'Failed to add habit: ${e.toString()}';
       notifyListeners();
@@ -109,9 +108,12 @@ class HabitProvider with ChangeNotifier {
       
       // Award XP with animation
       if (added && userProgressProvider != null) {
-        await userProgressProvider.addXPWithAnimation(habit.xpValue, 'habit_completion');
-        await userProgressProvider.incrementHabitCompletion();
-        // TODO: trigger confetti/haptics/sound here; placeholder hook
+        await userProgressProvider.addXPWithAnimation(habit.xpValue, 'habit_completion', habit.category);
+        await userProgressProvider.incrementHabitCompletion(habit.category);
+
+        if (pendingTodayHabits.isEmpty) {
+          await userProgressProvider.incrementPerfectDays();
+        }
       }
       
     } catch (e) {
@@ -130,6 +132,7 @@ class HabitProvider with ChangeNotifier {
         if (habit != null) {
           final userProgressProvider = Provider.of<UserProgressProvider>(buildContext, listen: false);
           await userProgressProvider.addXP(-habit.xpValue, 'habit_uncomplete');
+          await userProgressProvider.decrementHabitCompletion(habit.category);
         }
       }
     } catch (e) {
@@ -163,6 +166,12 @@ class HabitProvider with ChangeNotifier {
 
       await _habitRepository.updateHabit(updatedHabit);
       await loadHabits();
+
+      final buildContext = navigatorKey.currentContext;
+      if (buildContext != null && buildContext.mounted) {
+        final userProgressProvider = Provider.of<UserProgressProvider>(buildContext, listen: false);
+        await userProgressProvider.useStreakFreeze();
+      }
       
       return true;
     } catch (e) {

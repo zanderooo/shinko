@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shinko/src/domain/entities/user_stats.dart';
 
 @immutable
 class UserProgress {
@@ -13,6 +14,7 @@ class UserProgress {
   final int totalPerfectDays;
   final DateTime? lastActiveDate;
   final DateTime createdAt;
+  final UserStats stats;
 
   const UserProgress({
     this.totalXP = 0,
@@ -26,6 +28,7 @@ class UserProgress {
     this.totalPerfectDays = 0,
     this.lastActiveDate,
     required this.createdAt,
+    this.stats = const UserStats(),
   });
 
   UserProgress copyWith({
@@ -40,6 +43,7 @@ class UserProgress {
     int? totalPerfectDays,
     DateTime? lastActiveDate,
     DateTime? createdAt,
+    UserStats? stats,
   }) {
     return UserProgress(
       totalXP: totalXP ?? this.totalXP,
@@ -53,6 +57,7 @@ class UserProgress {
       totalPerfectDays: totalPerfectDays ?? this.totalPerfectDays,
       lastActiveDate: lastActiveDate ?? this.lastActiveDate,
       createdAt: createdAt ?? this.createdAt,
+      stats: stats ?? this.stats,
     );
   }
 
@@ -72,6 +77,40 @@ class UserProgress {
     return 100 + (level * 25);
   }
 
+  factory UserProgress.fromJson(Map<String, dynamic> json) {
+    return UserProgress(
+      totalXP: json['totalXP'] as int,
+      currentLevel: json['currentLevel'] as int,
+      xpToNextLevel: json['xpToNextLevel'] as int,
+      dailyStreak: json['dailyStreak'] as int,
+      bestDailyStreak: json['bestDailyStreak'] as int,
+      weeklyStreak: json['weeklyStreak'] as int,
+      bestWeeklyStreak: json['bestWeeklyStreak'] as int,
+      totalHabitsCompleted: json['totalHabitsCompleted'] as int,
+      totalPerfectDays: json['totalPerfectDays'] as int,
+      lastActiveDate: json['lastActiveDate'] != null
+          ? DateTime.parse(json['lastActiveDate'] as String)
+          : null,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'totalXP': totalXP,
+        'currentLevel': currentLevel,
+        'xpToNextLevel': xpToNextLevel,
+        'dailyStreak': dailyStreak,
+        'bestDailyStreak': bestDailyStreak,
+        'weeklyStreak': weeklyStreak,
+        'bestWeeklyStreak': bestWeeklyStreak,
+        'totalHabitsCompleted': totalHabitsCompleted,
+        'totalPerfectDays': totalPerfectDays,
+        'lastActiveDate': lastActiveDate?.toIso8601String(),
+        'createdAt': createdAt.toIso8601String(),
+        'stats': stats.toJson(),
+      };
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -86,7 +125,8 @@ class UserProgress {
         other.totalHabitsCompleted == totalHabitsCompleted &&
         other.totalPerfectDays == totalPerfectDays &&
         other.lastActiveDate == lastActiveDate &&
-        other.createdAt == createdAt;
+        other.createdAt == createdAt &&
+        other.stats == stats;
   }
 
   @override
@@ -101,6 +141,7 @@ class UserProgress {
         totalHabitsCompleted.hashCode ^
         totalPerfectDays.hashCode ^
         lastActiveDate.hashCode ^
-        createdAt.hashCode;
+        createdAt.hashCode ^
+        stats.hashCode;
   }
 }

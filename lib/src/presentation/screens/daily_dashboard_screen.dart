@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shinko/src/domain/entities/habit.dart';
@@ -17,7 +19,7 @@ class DailyDashboardScreen extends StatefulWidget {
 }
 
 class _DailyDashboardScreenState extends State<DailyDashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -99,9 +101,9 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                  Colors.purple.withValues(alpha: 0.2),
-                  Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
+                  Theme.of(context).colorScheme.primary.withAlpha(77),
+                  Colors.purple.withAlpha(51),
+                  Theme.of(context).colorScheme.secondary.withAlpha(77),
                 ],
                 stops: const [0.0, 0.5, 1.0],
               ),
@@ -110,7 +112,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
           // Glassmorphism overlay
           Container(
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withAlpha(26),
               backgroundBlendMode: BlendMode.darken,
             ),
           ),
@@ -174,15 +176,15 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
-            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
+            Theme.of(context).colorScheme.secondary.withAlpha(26),
+            Theme.of(context).colorScheme.secondary.withAlpha(13),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
+          color: Theme.of(context).colorScheme.secondary.withAlpha(77),
           width: 1,
         ),
       ),
@@ -260,14 +262,14 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
         Text(
           greeting,
           style: AppTheme.titleLarge.copyWith(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: Colors.white.withAlpha(178),
           ),
         ),
         const SizedBox(height: 4),
         Text(
           '進行 - Progress awaits',
           style: AppTheme.titleMedium.copyWith(
-            color: Colors.white.withValues(alpha: 0.5),
+            color: Colors.white.withAlpha(128),
           ),
         ),
       ],
@@ -288,41 +290,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
           ...quests.map((q) => Padding(padding: const EdgeInsets.only(bottom: 8), child: QuestCard(quest: q))),
         if (chest != null) ...[
           const SizedBox(height: 8),
-          Container(
-            decoration: AppTheme.glassCardDecoration,
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                const Icon(Icons.card_giftcard, color: Colors.amber),
-                const SizedBox(width: 12),
-                Expanded(child: Text(chest.title, style: AppTheme.bodyLarge)),
-                if (chest.isCompleted)
-                  ElevatedButton(
-                    onPressed: () async {
-                      final localContext = context;
-                      final claimed = await questProvider.claimBonusChest(localContext, (xp, cosmeticId) async {
-                        final up = localContext.read<UserProgressProvider>();
-                        await up.addXPWithAnimation(xp, 'bonus_chest');
-                        if (cosmeticId != null && localContext.mounted) {
-                          // optional: unlock cosmetic via provider if passed
-                        }
-                        if (localContext.mounted) {
-                          ScaffoldMessenger.of(localContext).showSnackBar(
-                            SnackBar(content: Text('Bonus chest: +$xp XP')),
-                          );
-                        }
-                      });
-                      if (claimed != null && context.mounted) {
-                        setState(() {});
-                      }
-                    },
-                    child: const Text('Claim'),
-                  )
-                else
-                  Text('Locked', style: AppTheme.caption.copyWith(color: Colors.white70)),
-              ],
-            ),
-          ),
+          _MysteryChestCard(chest: chest, vsync: this),
         ],
       ],
     );
@@ -335,9 +303,9 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
       decoration: AppTheme.neonCardDecoration.copyWith(
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-            Colors.purple.withValues(alpha: 0.1),
+            Theme.of(context).colorScheme.primary.withAlpha(102),
+            Theme.of(context).colorScheme.primary.withAlpha(51),
+            Colors.purple.withAlpha(26),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -345,13 +313,13 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+            color: Theme.of(context).colorScheme.primary.withAlpha(102),
             blurRadius: 32,
             spreadRadius: 2,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: Colors.purple.withValues(alpha: 0.2),
+            color: Colors.purple.withAlpha(51),
             blurRadius: 24,
             spreadRadius: 1,
             offset: const Offset(0, 4),
@@ -381,7 +349,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                          color: Theme.of(context).colorScheme.primary.withAlpha(77),
                           blurRadius: 12,
                           spreadRadius: 1,
                         ),
@@ -409,8 +377,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.amber.withValues(alpha: 0.3),
-                      Colors.orange.withValues(alpha: 0.2),
+                      Colors.amber.withAlpha(77),
+                      Colors.orange.withAlpha(51),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -418,7 +386,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.amber.withValues(alpha: 0.3),
+                      color: Colors.amber.withAlpha(77),
                       blurRadius: 12,
                       spreadRadius: 1,
                     ),
@@ -442,7 +410,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
               height: 16,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Colors.white.withAlpha(26),
               ),
               child: Stack(
                 children: [
@@ -462,7 +430,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                          color: Theme.of(context).colorScheme.primary.withAlpha(153),
                           blurRadius: 12,
                           spreadRadius: 2,
                         ),
@@ -475,7 +443,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                       borderRadius: BorderRadius.circular(8),
                       gradient: LinearGradient(
                         colors: [
-                          Colors.white.withValues(alpha: 0.4),
+                          Colors.white.withAlpha(102),
                           Colors.transparent,
                         ],
                         begin: Alignment.topLeft,
@@ -518,8 +486,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.green.withValues(alpha: 0.4),
-                    Colors.teal.withValues(alpha: 0.3),
+                    Colors.green.withAlpha(102),
+                    Colors.teal.withAlpha(77),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -527,7 +495,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withValues(alpha: 0.3),
+                    color: Colors.green.withAlpha(77),
                     blurRadius: 12,
                     spreadRadius: 1,
                   ),
@@ -696,19 +664,19 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
               borderRadius: BorderRadius.circular(16),
               gradient: LinearGradient(
                 colors: [
-                  Colors.green.withValues(alpha: 0.2),
-                  Colors.green.withValues(alpha: 0.1),
+                  Colors.green.withAlpha(51),
+                  Colors.green.withAlpha(26),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               border: Border.all(
-                color: Colors.green.withValues(alpha: 0.4),
+                color: Colors.green.withAlpha(102),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.withValues(alpha: 0.3),
+                  color: Colors.green.withAlpha(77),
                   blurRadius: 12,
                   spreadRadius: 1,
                   offset: const Offset(0, 4),
@@ -741,8 +709,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            habit.category.color.withValues(alpha: 0.3),
-                            habit.category.color.withValues(alpha: 0.1),
+                            habit.category.color.withAlpha(77),
+                            habit.category.color.withAlpha(26),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -750,7 +718,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: habit.category.color.withValues(alpha: 0.2),
+                            color: habit.category.color.withAlpha(51),
                             blurRadius: 8,
                             spreadRadius: 1,
                           ),
@@ -817,7 +785,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.2),
+                            color: Colors.blue.withAlpha(51),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -1095,6 +1063,124 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
             child: const Text('Save'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MysteryChestCard extends StatefulWidget {
+  final dynamic chest;
+  final TickerProvider vsync;
+
+  const _MysteryChestCard({required this.chest, required this.vsync});
+
+  @override
+  __MysteryChestCardState createState() => __MysteryChestCardState();
+}
+
+class __MysteryChestCardState extends State<_MysteryChestCard> {
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: widget.vsync,
+      duration: const Duration(milliseconds: 500),
+    );
+    if (widget.chest.isCompleted && !widget.chest.isClaimed) {
+      _animationController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _MysteryChestCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.chest.isCompleted && !widget.chest.isClaimed) {
+      _animationController.repeat(reverse: true);
+    } else {
+      _animationController.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final questProvider = context.watch<QuestProvider>();
+
+    return Card(
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: AppTheme.glassCardDecoration.copyWith(
+          gradient: LinearGradient(
+            colors: [
+              Colors.amber.withAlpha(102),
+              Colors.orange.withAlpha(77),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                final angle = widget.chest.isCompleted && !widget.chest.isClaimed ? (sin(_animationController.value * 2 * pi) * 0.1) : 0.0;
+                return Transform.rotate(
+                  angle: angle,
+                  child: const Icon(Icons.card_giftcard, color: Colors.amber, size: 32),
+                );
+              },
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.chest.title, style: AppTheme.bodyLarge),
+                  Text(widget.chest.description, style: AppTheme.caption),
+                ],
+              ),
+            ),
+            if (widget.chest.isClaimed)
+              const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text('Claimed', style: TextStyle(color: Colors.green)),
+                ],
+              )
+            else if (widget.chest.isCompleted)
+              ElevatedButton(
+                onPressed: () async {
+                  final localContext = context;
+                  await questProvider.claimBonusChest(localContext, (xp, cosmeticId) async {
+                    final up = localContext.read<UserProgressProvider>();
+                    await up.addXPWithAnimation(xp, 'bonus_chest');
+                    if (cosmeticId != null && localContext.mounted) {
+                      // optional: unlock cosmetic via provider if passed
+                    }
+                    if (localContext.mounted) {
+                      ScaffoldMessenger.of(localContext).showSnackBar(
+                        SnackBar(content: Text('Bonus chest: +$xp XP')),
+                      );
+                    }
+                  });
+                },
+                child: const Text('Claim'),
+              )
+            else
+              Text('Locked', style: AppTheme.caption.copyWith(color: Colors.white70)),
+          ],
+        ),
       ),
     );
   }

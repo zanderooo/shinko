@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shinko/src/domain/entities/quest.dart';
 import 'package:shinko/src/presentation/providers/habit_provider.dart';
 
@@ -8,6 +9,7 @@ class QuestProvider with ChangeNotifier {
   final HabitProvider habitProvider;
   List<Quest> _todayQuests = [];
   bool _generatedForToday = false;
+  bool _isBonusChestClaimedToday = false;
 
   QuestProvider(this.habitProvider);
 
@@ -18,9 +20,22 @@ class QuestProvider with ChangeNotifier {
   Future<void> ensureGeneratedForToday() async {
     if (_generatedForToday) return;
     _generatedForToday = true;
+    await _loadClaimedState();
     _todayQuests = _generateDailyQuests();
     _recalculateProgress();
     notifyListeners();
+  }
+
+  Future<void> _loadClaimedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayKey = 'claimed_chest_${_today.toIso8601String()}';
+    _isBonusChestClaimedToday = prefs.getBool(todayKey) ?? false;
+  }
+
+  Future<void> _saveClaimedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayKey = 'claimed_chest_${_today.toIso8601String()}';
+    await prefs.setBool(todayKey, _isBonusChestClaimedToday);
   }
 
   void onHabitsChanged() {
@@ -53,10 +68,13 @@ class QuestProvider with ChangeNotifier {
 
   List<Quest> _generateDailyQuests() {
     final rng = Random();
-    final count = 3 + rng.nextInt(3); // 3..5
     final quests = <Quest>[];
-    for (int i = 0; i < count; i++) {
-      final type = QuestType.values[rng.nextInt(QuestType.values.length)];
+    final availableQuestTypes = QuestType.values.toList();
+    availableQuestTypes.shuffle(rng);
+
+    for (int i = 0; i < 3; i++) {
+      if (availableQuestTypes.isEmpty) break;
+      final type = availableQuestTypes.removeLast();
       int target;
       String title;
       String description;
@@ -110,13 +128,16 @@ class QuestProvider with ChangeNotifier {
       progress: allDone ? 1 : 0,
       rewardXp: 50,
       isCompleted: allDone,
-      isClaimed: false,
+      isClaimed: _isBonusChestClaimedToday,
     );
   }
 
   Future<Quest?> claimBonusChest(BuildContext context, void Function(int xp, String? cosmeticId) onReward) async {
     final chest = bonusChest;
-    if (chest == null || !chest.isCompleted) return null;
+    if (chest == null || !chest.isCompleted || _isBonusChestClaimedToday) return null;
+    
+    _isBonusChestClaimedToday = true;
+    
     // cosmetic reward chance
     final rewardXp = chest.rewardXp;
     String? cosmeticId;
@@ -124,8 +145,10 @@ class QuestProvider with ChangeNotifier {
     // Keeping it simple: 30% chance to unlock a random cosmetic if any locked remain
     // Caller can wire CosmeticProvider here if desired
     onReward(rewardXp, cosmeticId);
+    
+    await _saveClaimedState();
+    notifyListeners();
+    
     return chest.copyWith(isClaimed: true);
   }
 }
-
-

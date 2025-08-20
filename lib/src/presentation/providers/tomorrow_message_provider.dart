@@ -2,75 +2,84 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TomorrowMessageProvider with ChangeNotifier {
+  // Centralized keys to avoid typos
+  static const _keyTomorrowMessage = 'tomorrow_message';
+  static const _keyLastMessageDate = 'last_message_date';
+
   String? _tomorrowMessage;
   String? _currentMessage;
-  // Tracks when the message was last shown; reserved for future use
-  // ignore: unused_field
-  DateTime? _lastMessageDate;
 
   String? get currentMessage => _currentMessage;
   String? get tomorrowMessage => _tomorrowMessage;
 
+  /// Load the stored message logic:
+  /// - If there's a saved message from yesterday → show it today.
+  /// - If it's already shown today → don't repeat it.
+  /// - Otherwise → clear old messages.
   Future<void> loadMessage() async {
     final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now();
-    final lastMessageDateStr = prefs.getString('last_message_date');
-    final savedMessage = prefs.getString('tomorrow_message');
+    final today = _stripTime(DateTime.now());
 
-    // Check if we need to show the saved message for today
+    final lastMessageDateStr = prefs.getString(_keyLastMessageDate);
+    final savedMessage = prefs.getString(_keyTomorrowMessage);
+
     if (lastMessageDateStr != null) {
-      final lastDate = DateTime.parse(lastMessageDateStr);
-      
-      // If the saved message was for yesterday, show it today
-      if (_isYesterday(lastDate, today)) {
+      final lastDate = _stripTime(DateTime.parse(lastMessageDateStr));
+
+      if (_isYesterday(lastDate, today) && savedMessage != null) {
+        // Yesterday's "tomorrow message" becomes today's "current message"
         _currentMessage = savedMessage;
-        _lastMessageDate = today;
-        
-        // Clear the tomorrow message after showing it
-        await prefs.remove('tomorrow_message');
-        await prefs.setString('last_message_date', today.toIso8601String());
+        _tomorrowMessage = null;
+
+        await prefs.remove(_keyTomorrowMessage);
+        await prefs.setString(_keyLastMessageDate, today.toIso8601String());
       } else if (_isSameDay(lastDate, today)) {
-        // Message already shown today
+        // Already showed something today
         _currentMessage = null;
       } else {
-        // Old message, clear it
+        // Stale message → clear it
         _currentMessage = null;
-        await prefs.remove('tomorrow_message');
+        _tomorrowMessage = null;
+        await prefs.remove(_keyTomorrowMessage);
       }
     }
 
     notifyListeners();
   }
 
+  /// Save a message that should appear *tomorrow*.
   Future<void> saveTomorrowMessage(String message) async {
     final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now();
-    
+    final today = _stripTime(DateTime.now());
+
     _tomorrowMessage = message;
-    await prefs.setString('tomorrow_message', message);
-    await prefs.setString('last_message_date', today.toIso8601String());
-    
+
+    await prefs.setString(_keyTomorrowMessage, message);
+    await prefs.setString(_keyLastMessageDate, today.toIso8601String());
+
     notifyListeners();
   }
 
-  bool _isYesterday(DateTime date, DateTime today) {
-    final yesterday = today.subtract(const Duration(days: 1));
-    return date.year == yesterday.year && 
-           date.month == yesterday.month && 
-           date.day == yesterday.day;
-  }
-
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year && 
-           date1.month == date2.month && 
-           date1.day == date2.day;
-  }
-
+  /// Explicitly clear both current and tomorrow messages.
   Future<void> clearMessage() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('tomorrow_message');
+    await prefs.remove(_keyTomorrowMessage);
+    await prefs.remove(_keyLastMessageDate);
+
     _tomorrowMessage = null;
     _currentMessage = null;
+
     notifyListeners();
   }
+
+  // ------------------ 🛠️ Helpers ------------------ //
+
+  DateTime _stripTime(DateTime dt) =>
+      DateTime(dt.year, dt.month, dt.day);
+
+  bool _isYesterday(DateTime date, DateTime today) =>
+      date == _stripTime(today.subtract(const Duration(days: 1)));
+
+  bool _isSameDay(DateTime d1, DateTime d2) =>
+      d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
 }

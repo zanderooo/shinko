@@ -7,6 +7,9 @@ enum AchievementType {
   category,
   perfection,
   consistency,
+  firstHabit,
+  perfectDays,
+  streakFreeze,
 }
 
 enum AchievementRarity {
@@ -79,6 +82,42 @@ class Achievement {
       streakFreezeReward: streakFreezeReward ?? this.streakFreezeReward,
     );
   }
+
+  factory Achievement.fromJson(Map<String, dynamic> json) {
+    return Achievement(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      type: AchievementType.values[json['type'] as int],
+      rarity: AchievementRarity.values[json['rarity'] as int],
+      xpReward: json['xpReward'] as int,
+      iconData: json['iconData'] as String,
+      isUnlocked: json['isUnlocked'] as bool,
+      unlockedAt: json['unlockedAt'] != null
+          ? DateTime.parse(json['unlockedAt'] as String)
+          : null,
+      progress: json['progress'] as int,
+      target: json['target'] as int,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      streakFreezeReward: json['streakFreezeReward'] as int,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'type': type.index,
+        'rarity': rarity.index,
+        'xpReward': xpReward,
+        'iconData': iconData,
+        'isUnlocked': isUnlocked,
+        'unlockedAt': unlockedAt?.toIso8601String(),
+        'progress': progress,
+        'target': target,
+        'createdAt': createdAt.toIso8601String(),
+        'streakFreezeReward': streakFreezeReward,
+      };
 
   double get progressPercentage {
     if (target == 0) return 0.0;

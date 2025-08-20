@@ -8,50 +8,61 @@ class JourneyStyleTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cos = context.watch<CosmeticProvider>();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Style')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Themes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          ...cos.allItems.where((e) => e.type == 'theme').map((item) => ListTile(
-                title: Text(item.name),
-                trailing: cos.equippedByType['theme'] == item.id
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : ElevatedButton(
-                        onPressed: cos.unlocked.contains(item.id) ? () => cos.equip(item.id) : null,
-                        child: Text(cos.unlocked.contains(item.id) ? 'Equip' : 'Locked'),
-                      ),
-              )),
+          _buildCosmeticSection(context, cos, 'Themes', 'theme', Icons.color_lens),
           const SizedBox(height: 16),
-          const Text('Icons', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          ...cos.allItems.where((e) => e.type == 'icon').map((item) => ListTile(
-                title: Text(item.name),
-                trailing: cos.equippedByType['icon'] == item.id
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : ElevatedButton(
-                        onPressed: cos.unlocked.contains(item.id) ? () => cos.equip(item.id) : null,
-                        child: Text(cos.unlocked.contains(item.id) ? 'Equip' : 'Locked'),
-                      ),
-              )),
+          _buildCosmeticSection(context, cos, 'Icons', 'icon', Icons.insert_emoticon),
           const SizedBox(height: 16),
-          const Text('Trails', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          ...cos.allItems.where((e) => e.type == 'trail').map((item) => ListTile(
-                title: Text(item.name),
-                trailing: cos.equippedByType['trail'] == item.id
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : ElevatedButton(
-                        onPressed: cos.unlocked.contains(item.id) ? () => cos.equip(item.id) : null,
-                        child: Text(cos.unlocked.contains(item.id) ? 'Equip' : 'Locked'),
-                      ),
-              )),
+          _buildCosmeticSection(context, cos, 'Trails', 'trail', Icons.motion_photos_on),
         ],
       ),
     );
   }
+
+  /// Builds a generic cosmetic section for different item types
+  Widget _buildCosmeticSection(
+    BuildContext context,
+    CosmeticProvider cos,
+    String title,
+    String type,
+    IconData icon,
+  ) {
+    final items = cos.allItems.where((e) => e.type == type);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...items.map((item) {
+          final isEquipped = cos.equippedByType[type] == item.id;
+          final isUnlocked = cos.unlocked.contains(item.id);
+
+          return ListTile(
+            title: Text(item.name),
+            trailing: isEquipped
+                ? const Icon(Icons.check, color: Colors.green)
+                : ElevatedButton(
+                    onPressed: isUnlocked ? () => cos.equip(item.id) : null,
+                    child: Text(isUnlocked ? 'Equip' : 'Locked'),
+                  ),
+          );
+        }),
+      ],
+    );
+  }
 }
-
-
