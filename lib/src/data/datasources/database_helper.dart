@@ -4,7 +4,7 @@ import 'dart:io' show Platform;
 
 class DatabaseHelper {
   static const _databaseName = 'shinko.db';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 4;
 
   // Table names
   static const tableHabits = 'habits';
@@ -83,6 +83,9 @@ class DatabaseHelper {
       await addColumnIfMissing(tableHabits, columnStreakFreezes, '$columnStreakFreezes INTEGER DEFAULT 0');
       await addColumnIfMissing(tableHabits, columnLastStreakFreezeUsed, '$columnLastStreakFreezeUsed TEXT');
     }
+    if (oldVersion < 4) {
+      await addColumnIfMissing(tableUserProgress, 'total_streak_freezes_used', 'total_streak_freezes_used INTEGER DEFAULT 0');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -121,6 +124,7 @@ class DatabaseHelper {
         best_weekly_streak INTEGER DEFAULT 0,
         total_habits_completed INTEGER DEFAULT 0,
         total_perfect_days INTEGER DEFAULT 0,
+        total_streak_freezes_used INTEGER DEFAULT 0,
         last_active_date TEXT,
         created_at TEXT NOT NULL
       )
@@ -154,6 +158,7 @@ class DatabaseHelper {
       'best_weekly_streak': 0,
       'total_habits_completed': 0,
       'total_perfect_days': 0,
+      'total_streak_freezes_used': 0,
       'last_active_date': null,
       'created_at': DateTime.now().toIso8601String(),
     });

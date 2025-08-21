@@ -201,6 +201,17 @@ class HabitProvider with ChangeNotifier {
       if (buildContext != null && buildContext.mounted) {
         final userProgressProvider = Provider.of<UserProgressProvider>(buildContext, listen: false);
         await userProgressProvider.useStreakFreeze();
+        
+        // Show a notification to the user
+        if (buildContext.mounted) {
+          ScaffoldMessenger.of(buildContext).showSnackBar(
+            const SnackBar(
+              content: Text('Streak freeze used! Your streak is protected. ❄️'),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
       
       return true;
@@ -245,6 +256,21 @@ class HabitProvider with ChangeNotifier {
     }
 
     return true;
+  }
+  
+  bool needsStreakFreeze(String habitId) {
+    final habit = getHabitById(habitId);
+    if (habit == null) return false;
+    
+    // If the habit was completed today, no need for streak freeze
+    final today = DateTime.now();
+    final todayEpoch = today.difference(DateTime(1970, 1, 1)).inDays;
+    if (habit.completionHistory.contains(todayEpoch)) {
+      return false;
+    }
+    
+    // If the habit has a streak and wasn't completed today, it might need a streak freeze
+    return habit.currentStreak > 0;
   }
 
   Habit? getHabitById(String id) {

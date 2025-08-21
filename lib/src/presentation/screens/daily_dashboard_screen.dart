@@ -20,6 +20,7 @@ class DailyDashboardScreen extends StatefulWidget {
 
 class _DailyDashboardScreenState extends State<DailyDashboardScreen>
     with TickerProviderStateMixin {
+  late final ScaffoldMessengerState _scaffoldMessenger;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -27,6 +28,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
   @override
   void initState() {
     super.initState();
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -270,14 +272,49 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
       greeting = 'Good Evening';
     }
 
+    final userProgress = Provider.of<UserProgressProvider>(context, listen: false);
+    final coins = userProgress.userProgress.coins;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          greeting,
-          style: AppTheme.titleLarge.copyWith(
-            color: Colors.white.withAlpha(178),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              greeting,
+              style: AppTheme.titleLarge.copyWith(
+                color: Colors.white.withAlpha(178),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.amber.withAlpha(40),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.amber.withAlpha(100),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    '🪙',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$coins',
+                    style: AppTheme.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
         Text(
@@ -791,8 +828,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                     ),
                   ],
                 ),
-                if (!isCompleted && (habit.streakFreezes > 0 || canUseFreeze)) ...[
-                  const SizedBox(height: 8),
+                if (!isCompleted) ...[                  const SizedBox(height: 8),
                   Row(
                     children: [
                       if (habit.streakFreezes > 0)
@@ -813,26 +849,45 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                       const SizedBox(width: 8),
                       if (canUseFreeze)
                         TextButton.icon(
-                          onPressed: () async {
-                            final localContext = context;
-                            final success = await habitProvider.useStreakFreeze(habit.id);
-                            if (success && localContext.mounted) {
-                              ScaffoldMessenger.of(localContext).showSnackBar(
-                                SnackBar(
-                                  content: Text('Streak freeze used! ❄️'),
-                                  backgroundColor: Colors.blue,
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            }
-                          },
+                          onPressed: () => habitProvider.useStreakFreeze(habit.id),
                           icon: const Icon(Icons.ac_unit, size: 16),
-                          label: const Text('Use Freeze'),
+                          label: Text(
+                            habitProvider.needsStreakFreeze(habit.id) 
+                              ? 'Save Streak' 
+                              : 'Use Freeze',
+                            style: TextStyle(
+                              color: habitProvider.needsStreakFreeze(habit.id) 
+                                ? Colors.red 
+                                : Colors.blue,
+                              fontWeight: habitProvider.needsStreakFreeze(habit.id) 
+                                ? FontWeight.bold 
+                                : FontWeight.normal,
+                            ),
+                          ),
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.blue,
+                            backgroundColor: habitProvider.needsStreakFreeze(habit.id) 
+                              ? Colors.red.withValues(alpha: 26) 
+                              : Colors.blue.withValues(alpha: 26),
+                            foregroundColor: habitProvider.needsStreakFreeze(habit.id) 
+                              ? Colors.red 
+                              : Colors.blue,
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      if (habit.currentStreak > 0 && !isCompleted)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Text(
+                            '${habit.currentStreak} day streak',
+                            style: TextStyle(
+                              color: habitProvider.needsStreakFreeze(habit.id) 
+                                ? Colors.red 
+                                : Colors.grey,
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
                     ],
@@ -852,9 +907,24 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Recent Achievements',
-          style: AppTheme.titleLarge,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Achievements',
+              style: AppTheme.titleLarge,
+            ),
+            if (recentAchievements.isNotEmpty)
+              TextButton.icon(
+                onPressed: () => _showClearAchievementsDialog(userProvider),
+                icon: const Icon(Icons.clear_all, size: 18),
+                label: const Text('Clear All'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade300,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 16),
         if (recentAchievements.isEmpty)
@@ -863,28 +933,98 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
             style: AppTheme.bodyMedium,
           )
         else
-          ...recentAchievements.map((achievement) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: AppTheme.glassCardDecoration,
-                child: ListTile(
-                  leading: Text(
-                    achievement.iconData,
-                    style: const TextStyle(fontSize: 24),
-                  ),
-                  title: Text(
-                    achievement.title,
-                    style: AppTheme.bodyLarge,
-                  ),
-                  subtitle: Text(
-                    '+${achievement.xpReward} XP',
-                    style: AppTheme.caption.copyWith(
-                      color: AppTheme.darkTheme.colorScheme.primary,
+          ...recentAchievements.map((achievement) => Dismissible(
+                key: Key('achievement_${achievement.id}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 16),
+                  color: Colors.red.shade700,
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (direction) {
+                  userProvider.hideAchievementFromRecent(achievement.id);
+                  _scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('${achievement.title} removed from recent achievements'),
+                      action: SnackBarAction(
+                        label: 'Undo',
+                        onPressed: () => userProvider.restoreHiddenAchievement(achievement.id),
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: AppTheme.glassCardDecoration,
+                  child: ListTile(
+                    leading: Text(
+                      achievement.iconData,
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                    title: Text(
+                      achievement.title,
+                      style: AppTheme.bodyLarge,
+                    ),
+                    subtitle: Text(
+                      '+${achievement.xpReward} XP',
+                      style: AppTheme.caption.copyWith(
+                        color: AppTheme.darkTheme.colorScheme.primary,
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () {
+                        userProvider.hideAchievementFromRecent(achievement.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${achievement.title} removed from recent achievements'),
+                            action: SnackBarAction(
+                              label: 'Undo',
+                              onPressed: () => userProvider.restoreHiddenAchievement(achievement.id),
+                            ),
+                          ),
+                        );
+                      },
+                      color: Colors.white54,
+                      splashRadius: 20,
                     ),
                   ),
                 ),
               )),
       ],
     );
+  }
+  
+  Future<void> _showClearAchievementsDialog(UserProgressProvider userProvider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Recent Achievements'),
+        content: const Text('This will remove all achievements from your recent list. They will still be available in your achievements section. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    ) ?? false;
+    
+    if (confirmed) {
+      userProvider.clearRecentAchievements();
+      _scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Recent achievements cleared')),
+      );
+    }
   }
 
   void _showQuickAddModal(BuildContext context) {
@@ -1200,6 +1340,26 @@ class __MysteryChestCardState extends State<_MysteryChestCard> {
                 children: [
                   Text(widget.chest.title, style: AppTheme.bodyLarge),
                   Text(widget.chest.description, style: AppTheme.caption),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        '+${widget.chest.rewardXp} XP',
+                        style: AppTheme.caption.copyWith(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '+${widget.chest.rewardCoins} 🪙',
+                        style: AppTheme.caption.copyWith(
+                          color: Colors.amber,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1215,7 +1375,7 @@ class __MysteryChestCardState extends State<_MysteryChestCard> {
               ElevatedButton(
                 onPressed: () async {
                   final localContext = context;
-                  await questProvider.claimBonusChest(localContext, (xp, cosmeticId) async {
+                  await questProvider.claimBonusChest(localContext, (xp, coins, cosmeticId) async {
                     final up = localContext.read<UserProgressProvider>();
                     await up.addXPWithAnimation(xp, 'bonus_chest');
                     if (cosmeticId != null && localContext.mounted) {
@@ -1225,7 +1385,7 @@ class __MysteryChestCardState extends State<_MysteryChestCard> {
                     }
                     if (localContext.mounted) {
                       ScaffoldMessenger.of(localContext).showSnackBar(
-                        SnackBar(content: Text('Bonus chest: +$xp XP')),
+                        SnackBar(content: Text('Bonus chest: +$xp XP, +$coins 🪙')),
                       );
                     }
                   });

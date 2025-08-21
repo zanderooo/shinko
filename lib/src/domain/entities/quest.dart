@@ -17,6 +17,7 @@ class Quest {
   final int target;
   final int progress;
   final int rewardXp;
+  final int rewardCoins;
   final bool isCompleted;
   final bool isClaimed;
 
@@ -29,6 +30,7 @@ class Quest {
     required this.target,
     required this.progress,
     required this.rewardXp,
+    this.rewardCoins = 0,
     this.isCompleted = false,
     this.isClaimed = false,
   });
@@ -42,6 +44,7 @@ class Quest {
     int? target,
     int? progress,
     int? rewardXp,
+    int? rewardCoins,
     bool? isCompleted,
     bool? isClaimed,
   }) {
@@ -54,6 +57,7 @@ class Quest {
       target: target ?? this.target,
       progress: progress ?? this.progress,
       rewardXp: rewardXp ?? this.rewardXp,
+      rewardCoins: rewardCoins ?? this.rewardCoins,
       isCompleted: isCompleted ?? this.isCompleted,
       isClaimed: isClaimed ?? this.isClaimed,
     );

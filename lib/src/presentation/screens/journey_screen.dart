@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/achievement.dart';
+
 import '../providers/habit_provider.dart';
 import '../providers/user_progress_provider.dart';
 import 'journey_style_tab.dart';
@@ -50,6 +51,12 @@ class JourneyScreen extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.all(16.0),
                 child: JourneyStats(),
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: RPGStatsCard(),
               ),
             ),
             const SliverToBoxAdapter(
@@ -431,11 +438,24 @@ class _JourneyStatsState extends State<JourneyStats> with SingleTickerProviderSt
     _controller.dispose();
     super.dispose();
   }
+  
+  String _getLevelTitle(int level) {
+    if (level >= 30) return 'Legendary';
+    if (level >= 25) return 'Champion';
+    if (level >= 20) return 'Hero';
+    if (level >= 15) return 'Veteran';
+    if (level >= 10) return 'Master';
+    if (level >= 5) return 'Expert';
+    if (level >= 3) return 'Adept';
+    return 'Novice';
+  }
 
   @override
   Widget build(BuildContext context) {
     final progress = context.watch<UserProgressProvider>();
     final theme = Theme.of(context);
+    final level = progress.userProgress.currentLevel;
+    final levelTitle = _getLevelTitle(level);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -483,11 +503,10 @@ class _JourneyStatsState extends State<JourneyStats> with SingleTickerProviderSt
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.favorite, color: Colors.red, size: 16),
+                    Icon(Icons.military_tech, color: Colors.amber, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      progress.userProgress.currentLevel >= 10 ? 'Master' : 
-                      progress.userProgress.currentLevel >= 5 ? 'Expert' : 'Rising',
+                      levelTitle,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -617,6 +636,19 @@ class _JourneyStatsState extends State<JourneyStats> with SingleTickerProviderSt
             ),
             minHeight: 8,
           ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Next level: ${(xpNeeded - currentLevelXP)} XP remaining',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1035,18 +1067,303 @@ class DetailedStatsCard extends StatelessWidget {
             _getDaysSinceCreated(progress.userProgress.createdAt),
             Icons.calendar_today_outlined,
           ),
+          _buildDetailRow(
+            context,
+            'Coins',
+            progress.userProgress.coins.toString(),
+            Icons.monetization_on_outlined,
+            Colors.amber,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(BuildContext context, String label, String value, IconData icon) {
+  String _getDaysSinceCreated(DateTime createdAt) {
+    final now = DateTime.now();
+    final difference = now.difference(createdAt);
+    return '${difference.inDays} days';
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value, IconData icon, [Color? color]) {
     final theme = Theme.of(context);
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, color: color ?? theme.colorScheme.primary, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white70,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class RPGStatsCard extends StatefulWidget {
+  const RPGStatsCard({super.key});
+
+  @override
+  State<RPGStatsCard> createState() => _RPGStatsCardState();
+}
+
+class _RPGStatsCardState extends State<RPGStatsCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _animation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = context.watch<UserProgressProvider>();
+    final theme = Theme.of(context);
+    final stats = progress.userProgress.stats;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.secondary.withValues(alpha: 0.3),
+            theme.colorScheme.tertiary.withValues(alpha: 0.2),
+            theme.colorScheme.primary.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withValues(alpha: 0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.secondary.withValues(alpha: 0.2),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Character Stats',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome, color: Colors.amber, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      _getCharacterClass(),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildStatRow(
+            context, 
+            'Strength', 
+            stats.strength, 
+            Icons.fitness_center, 
+            Colors.red,
+            'Physical power and endurance',
+          ),
+          _buildStatRow(
+            context, 
+            'Intelligence', 
+            stats.intelligence, 
+            Icons.psychology, 
+            Colors.blue,
+            'Knowledge and learning ability',
+          ),
+          _buildStatRow(
+            context, 
+            'Wisdom', 
+            stats.wisdom, 
+            Icons.self_improvement, 
+            Colors.teal,
+            'Insight and mindfulness',
+          ),
+          _buildStatRow(
+            context, 
+            'Charisma', 
+            stats.charisma, 
+            Icons.people, 
+            Colors.purple,
+            'Social influence and communication',
+          ),
+          _buildStatRow(
+            context, 
+            'Dexterity', 
+            stats.dexterity, 
+            Icons.speed, 
+            Colors.green,
+            'Agility and productivity',
+          ),
+          _buildStatRow(
+            context, 
+            'Luck', 
+            stats.luck, 
+            Icons.auto_awesome, 
+            Colors.amber,
+            'Fortune and unexpected benefits',
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getCharacterClass() {
+    final progress = context.read<UserProgressProvider>();
+    final stats = progress.userProgress.stats;
+    
+    // Determine character class based on highest stat
+    final Map<String, int> statValues = {
+      'Warrior': stats.strength,
+      'Mage': stats.intelligence,
+      'Monk': stats.wisdom,
+      'Bard': stats.charisma,
+      'Rogue': stats.dexterity,
+      'Gambler': stats.luck,
+    };
+    
+    // Find the highest stat
+    String highestStat = 'Adventurer';
+    int highestValue = 0;
+    
+    statValues.forEach((stat, value) {
+      if (value > highestValue) {
+        highestValue = value;
+        highestStat = stat;
+      }
+    });
+    
+    // If all stats are low, return Adventurer
+    if (highestValue < 10) {
+      return 'Adventurer';
+    }
+    
+    return highestStat;
+  }
+
+  Widget _buildStatRow(BuildContext context, String label, int value, IconData icon, Color color, String tooltip) {
+    final theme = Theme.of(context);
+    final maxValue = 100; // Maximum possible stat value
+    final progress = value / maxValue;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Tooltip(
+        message: tooltip,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                AnimatedBuilder(
+                  animation: _animation,
+                  builder: (context, child) {
+                    return Text(
+                      (value * _animation.value).toInt().toString(),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                return LinearProgressIndicator(
+                  value: progress * _animation.value,
+                  backgroundColor: Colors.white.withValues(alpha: 0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(color.withValues(alpha: 0.7)),
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(3),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value, IconData icon, [Color? color]) {
+    final theme = Theme.of(context);
+    final iconColor = color ?? theme.colorScheme.primary;
+    final textColor = color ?? theme.colorScheme.primary;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, color: theme.colorScheme.primary, size: 20),
+          Icon(icon, color: iconColor, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -1058,7 +1375,7 @@ class DetailedStatsCard extends StatelessWidget {
             value,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
+              color: textColor,
             ),
           ),
         ],
@@ -1416,7 +1733,6 @@ class _HabitCompletionChartState extends State<HabitCompletionChart> with Single
 
   @override
   Widget build(BuildContext context) {
-    final progress = context.watch<UserProgressProvider>();
     final theme = Theme.of(context);
     
     final maxCompletions = 10; // Fixed maximum for consistent scaling

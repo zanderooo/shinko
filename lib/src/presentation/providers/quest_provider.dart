@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shinko/src/presentation/providers/cosmetic_provider.dart';
 import 'package:shinko/src/domain/entities/quest.dart';
 import 'package:shinko/src/presentation/providers/habit_provider.dart';
+import 'package:shinko/src/presentation/providers/user_progress_provider.dart';
 
 class QuestProvider with ChangeNotifier {
   final HabitProvider habitProvider;
@@ -102,7 +103,8 @@ class QuestProvider with ChangeNotifier {
           description = 'Use 1 streak freeze to protect a streak.';
           break;
       }
-      final reward = 15 + rng.nextInt(36); // 15..50 XP
+      final xpReward = 15 + rng.nextInt(36); // 15..50 XP
+      final coinReward = 5 + rng.nextInt(16); // 5..20 coins
       quests.add(Quest(
         id: 'q_${_today.millisecondsSinceEpoch}_$i',
         date: _today,
@@ -111,7 +113,8 @@ class QuestProvider with ChangeNotifier {
         description: description,
         target: target,
         progress: 0,
-        rewardXp: reward,
+        rewardXp: xpReward,
+        rewardCoins: coinReward,
       ));
     }
     return quests;
@@ -129,12 +132,13 @@ class QuestProvider with ChangeNotifier {
       target: 1,
       progress: allDone ? 1 : 0,
       rewardXp: 50,
+      rewardCoins: 25,
       isCompleted: allDone,
       isClaimed: _isBonusChestClaimedToday,
     );
   }
 
-  Future<Quest?> claimBonusChest(BuildContext context, void Function(int xp, String? cosmeticId) onReward) async {
+  Future<Quest?> claimBonusChest(BuildContext context, void Function(int xp, int coins, String? cosmeticId) onReward) async {
     final chest = bonusChest;
     if (chest == null || !chest.isCompleted || _isBonusChestClaimedToday) return null;
     
@@ -142,6 +146,7 @@ class QuestProvider with ChangeNotifier {
     
     // cosmetic reward chance
     final rewardXp = chest.rewardXp;
+    final rewardCoins = chest.rewardCoins;
     String? cosmeticId;
     // 30% chance to unlock a random cosmetic if any locked remain
     if (context.mounted) {
@@ -151,12 +156,39 @@ class QuestProvider with ChangeNotifier {
         await cos.unlock(candidate.id);
         cosmeticId = candidate.id;
       }
+      
+      // Add coins to user progress
+      final userProgress = context.read<UserProgressProvider>();
+      await userProgress.addCoins(rewardCoins);
     }
-    onReward(rewardXp, cosmeticId);
+    onReward(rewardXp, rewardCoins, cosmeticId);
     
     await _saveClaimedState();
     notifyListeners();
     
     return chest.copyWith(isClaimed: true);
+  }
+  
+  Future<Quest?> claimQuest(BuildContext context, String questId, void Function(int xp, int coins) onReward) async {
+    final questIndex = _todayQuests.indexWhere((q) => q.id == questId);
+    if (questIndex == -1) return null;
+    
+    final quest = _todayQuests[questIndex];
+    if (!quest.isCompleted || quest.isClaimed) return null;
+    
+    // Update quest to claimed state
+    final updatedQuest = quest.copyWith(isClaimed: true);
+    _todayQuests[questIndex] = updatedQuest;
+    
+    // Award XP and coins
+    if (context.mounted) {
+      final userProgress = context.read<UserProgressProvider>();
+      await userProgress.addCoins(quest.rewardCoins);
+    }
+    
+    onReward(quest.rewardXp, quest.rewardCoins);
+    notifyListeners();
+    
+    return updatedQuest;
   }
 }

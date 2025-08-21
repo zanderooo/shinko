@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shinko/src/domain/entities/quest.dart';
+import 'package:shinko/src/presentation/providers/quest_provider.dart';
+import 'package:shinko/src/presentation/providers/user_progress_provider.dart';
 import 'package:shinko/src/presentation/theme/app_theme.dart';
 
 class QuestCard extends StatelessWidget {
@@ -61,13 +64,51 @@ class QuestCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            '+${quest.rewardXp} XP',
-            style: AppTheme.caption.copyWith(
-              color: isCompleted ? Colors.green : theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
+          if (quest.isClaimed)
+            const Column(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                Text('Claimed', style: TextStyle(color: Colors.green, fontSize: 12)),
+              ],
+            )
+          else if (isCompleted)
+            ElevatedButton(
+              onPressed: () async {
+                final questProvider = context.read<QuestProvider>();
+                final localContext = context;
+                await questProvider.claimQuest(localContext, quest.id, (xp, coins) async {
+                  final up = localContext.read<UserProgressProvider>();
+                  await up.addXPWithAnimation(xp, 'quest_${quest.id}');
+                  if (localContext.mounted) {
+                    ScaffoldMessenger.of(localContext).showSnackBar(
+                      SnackBar(content: Text('Quest completed: +$xp XP, +$coins 🪙')),
+                    );
+                  }
+                });
+              },
+              child: const Text('Claim'),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '+${quest.rewardXp} XP',
+                  style: AppTheme.caption.copyWith(
+                    color: isCompleted ? Colors.green : theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (quest.rewardCoins > 0)
+                  Text(
+                    '+${quest.rewardCoins} 🪙',
+                    style: AppTheme.caption.copyWith(
+                      color: isCompleted ? Colors.green : Colors.amber,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
             ),
-          ),
         ],
       ),
     );

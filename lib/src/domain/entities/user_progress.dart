@@ -12,6 +12,8 @@ class UserProgress {
   final int bestWeeklyStreak;
   final int totalHabitsCompleted;
   final int totalPerfectDays;
+  final int totalStreakFreezesUsed;
+  final int coins;
   final DateTime? lastActiveDate;
   final DateTime createdAt;
   final UserStats stats;
@@ -26,6 +28,8 @@ class UserProgress {
     this.bestWeeklyStreak = 0,
     this.totalHabitsCompleted = 0,
     this.totalPerfectDays = 0,
+    this.totalStreakFreezesUsed = 0,
+    this.coins = 0,
     this.lastActiveDate,
     required this.createdAt,
     this.stats = const UserStats(),
@@ -41,6 +45,8 @@ class UserProgress {
     int? bestWeeklyStreak,
     int? totalHabitsCompleted,
     int? totalPerfectDays,
+    int? totalStreakFreezesUsed,
+    int? coins,
     DateTime? lastActiveDate,
     DateTime? createdAt,
     UserStats? stats,
@@ -55,6 +61,8 @@ class UserProgress {
       bestWeeklyStreak: bestWeeklyStreak ?? this.bestWeeklyStreak,
       totalHabitsCompleted: totalHabitsCompleted ?? this.totalHabitsCompleted,
       totalPerfectDays: totalPerfectDays ?? this.totalPerfectDays,
+      totalStreakFreezesUsed: totalStreakFreezesUsed ?? this.totalStreakFreezesUsed,
+      coins: coins ?? this.coins,
       lastActiveDate: lastActiveDate ?? this.lastActiveDate,
       createdAt: createdAt ?? this.createdAt,
       stats: stats ?? this.stats,
@@ -88,6 +96,8 @@ class UserProgress {
       bestWeeklyStreak: json['bestWeeklyStreak'] as int,
       totalHabitsCompleted: json['totalHabitsCompleted'] as int,
       totalPerfectDays: json['totalPerfectDays'] as int,
+      totalStreakFreezesUsed: json['totalStreakFreezesUsed'] as int? ?? 0,
+      coins: json['coins'] as int? ?? 0,
       lastActiveDate: json['lastActiveDate'] != null
           ? DateTime.parse(json['lastActiveDate'] as String)
           : null,
@@ -106,6 +116,7 @@ class UserProgress {
         'bestWeeklyStreak': bestWeeklyStreak,
         'totalHabitsCompleted': totalHabitsCompleted,
         'totalPerfectDays': totalPerfectDays,
+        'totalStreakFreezesUsed': totalStreakFreezesUsed,
         'lastActiveDate': lastActiveDate?.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
         'stats': stats.toJson(),
@@ -124,6 +135,7 @@ class UserProgress {
         other.bestWeeklyStreak == bestWeeklyStreak &&
         other.totalHabitsCompleted == totalHabitsCompleted &&
         other.totalPerfectDays == totalPerfectDays &&
+        other.totalStreakFreezesUsed == totalStreakFreezesUsed &&
         other.lastActiveDate == lastActiveDate &&
         other.createdAt == createdAt &&
         other.stats == stats;
@@ -139,6 +151,7 @@ class UserProgress {
         weeklyStreak.hashCode ^
         bestWeeklyStreak.hashCode ^
         totalHabitsCompleted.hashCode ^
+        totalStreakFreezesUsed.hashCode ^
         totalPerfectDays.hashCode ^
         lastActiveDate.hashCode ^
         createdAt.hashCode ^

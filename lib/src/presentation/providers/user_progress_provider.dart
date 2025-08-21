@@ -13,6 +13,11 @@ import 'package:shinko/src/presentation/providers/habit_provider.dart';
 class UserProgressProvider with ChangeNotifier {
   static const _userProgressKey = 'user_progress';
   static const _achievementsKey = 'achievements';
+  static const _xpGainHistoryKey = 'xp_gain_history';
+  
+  // XP gain rate limiting
+  static const _maxDailyXP = 5000;
+  static const _maxHourlyXP = 1000;
 
   UserProgress _userProgress = UserProgress(
     totalXP: 0,
@@ -27,16 +32,29 @@ class UserProgressProvider with ChangeNotifier {
     createdAt: DateTime.now(),
     lastActiveDate: DateTime.now(),
     stats: const UserStats(),
+    totalStreakFreezesUsed: 0,
   );
 
   List<Achievement> _achievements = [];
   bool _isLoading = false;
   String? _error;
+  
+  // Track XP gains for rate limiting
+  final Map<String, int> _xpGainHistory = {}; // Format: 'yyyy-MM-dd-HH' -> amount
 
   UserProgress get userProgress => _userProgress;
   List<Achievement> get achievements => _achievements;
+  
+  // Track hidden achievements
+  Set<String> _hiddenAchievementIds = {};
+  
   List<Achievement> get unlockedAchievements =>
-      _achievements.where((a) => a.isUnlocked).toList();
+      _achievements
+          .where((a) => a.isUnlocked && !_hiddenAchievementIds.contains(a.id))
+          .toList()
+          ..sort((a, b) => (b.unlockedAt ?? DateTime.now())
+              .compareTo(a.unlockedAt ?? DateTime.now()));
+              
   List<Achievement> get lockedAchievements =>
       _achievements.where((a) => !a.isUnlocked).toList();
   bool get isLoading => _isLoading;
@@ -72,6 +90,26 @@ class UserProgressProvider with ChangeNotifier {
       } else {
         _achievements = _createInitialAchievements();
       }
+      
+      // Load hidden achievements
+      final hiddenAchievementsString = prefs.getString('hidden_achievements');
+      if (hiddenAchievementsString != null) {
+        final decoded = jsonDecode(hiddenAchievementsString) as List<dynamic>;
+        _hiddenAchievementIds = decoded.cast<String>().toSet();
+      }
+      
+      // Load XP gain history
+      final xpGainHistoryString = prefs.getString(_xpGainHistoryKey);
+      if (xpGainHistoryString != null) {
+        final decoded = jsonDecode(xpGainHistoryString) as Map<String, dynamic>;
+        _xpGainHistory.clear();
+        decoded.forEach((key, value) {
+          _xpGainHistory[key] = value as int;
+        });
+        
+        // Clean up old entries (older than 24 hours)
+        _cleanupXpGainHistory();
+      }
     } catch (e) {
       _error = 'Failed to load user progress: $e';
     } finally {
@@ -92,6 +130,38 @@ class UserProgressProvider with ChangeNotifier {
         _achievementsKey,
         jsonEncode(_achievements.map((e) => e.toJson()).toList()));
   }
+  
+  Future<void> _saveXpGainHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_xpGainHistoryKey, jsonEncode(_xpGainHistory));
+  }
+  
+  Future<void> _saveHiddenAchievements() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('hidden_achievements', jsonEncode(_hiddenAchievementIds.toList()));
+  }
+  
+  // Methods for managing recent achievements display
+  Future<void> hideAchievementFromRecent(String achievementId) async {
+    _hiddenAchievementIds.add(achievementId);
+    await _saveHiddenAchievements();
+    notifyListeners();
+  }
+  
+  Future<void> restoreHiddenAchievement(String achievementId) async {
+    _hiddenAchievementIds.remove(achievementId);
+    await _saveHiddenAchievements();
+    notifyListeners();
+  }
+  
+  Future<void> clearRecentAchievements() async {
+    // Add all unlocked achievement IDs to hidden set
+    for (final achievement in _achievements.where((a) => a.isUnlocked)) {
+      _hiddenAchievementIds.add(achievement.id);
+    }
+    await _saveHiddenAchievements();
+    notifyListeners();
+  }
 
   UserProgress _createFreshUserProgress() {
     return UserProgress(
@@ -106,6 +176,8 @@ class UserProgressProvider with ChangeNotifier {
       lastActiveDate: DateTime.now(),
       createdAt: DateTime.now(),
       stats: const UserStats(),
+      totalStreakFreezesUsed: 0,
+      coins: 0,
     );
   }
 
@@ -276,10 +348,36 @@ class UserProgressProvider with ChangeNotifier {
   Future<void> addXP(int amount, String source) async {
     if (amount == 0) return;
 
-    // Only allow XP mutations for habit sources
-    if (!source.startsWith('habit_')) return;
+    // Only allow XP mutations for valid sources
+    if (!source.startsWith('habit_') && !source.startsWith('achievement_') && !source.startsWith('quest_')) {
+      print('Invalid XP source: $source');
+      return;
+    }
+    
+    // Prevent negative XP exploits except for habit removals
+    if (amount < 0 && !source.startsWith('habit_')) {
+      print('Negative XP only allowed for habit sources');
+      return;
+    }
+    
+    // Cap XP gains per transaction to prevent exploits
+    int safeAmount = amount;
+    if (amount > 1000) {
+      print('XP gain capped from $amount to 1000');
+      safeAmount = 1000;
+    }
+    
+    // Apply rate limiting for positive XP gains
+    if (safeAmount > 0) {
+      final limitedAmount = _applyXpRateLimiting(safeAmount);
+      if (limitedAmount <= 0) {
+        print('XP gain rate limited - daily or hourly limit reached');
+        return; // Skip this XP gain entirely if rate limited
+      }
+      safeAmount = limitedAmount;
+    }
 
-    final newTotalXP = (_userProgress.totalXP + amount).clamp(0, 1 << 31);
+    final newTotalXP = (_userProgress.totalXP + safeAmount).clamp(0, 1 << 31);
     final currentLevel = _userProgress.currentLevel;
     final newLevel = _calculateLevel(newTotalXP);
     final newXpToNextLevel =
@@ -368,10 +466,32 @@ class UserProgressProvider with ChangeNotifier {
   Future<void> addXPWithAnimation(int amount, String source,
       [HabitCategory? category]) async {
     if (amount <= 0) return;
-    if (!source.startsWith('habit_')) return;
+    
+    // Only allow XP mutations for valid sources
+    if (!source.startsWith('habit_') && !source.startsWith('achievement_') && !source.startsWith('quest_')) {
+      print('Invalid XP source: $source');
+      return;
+    }
+    
+    // Cap XP gains per transaction to prevent exploits
+    int safeAmount = amount;
+    if (amount > 1000) {
+      print('XP gain capped from $amount to 1000');
+      safeAmount = 1000;
+    }
+    
+    // Apply rate limiting for positive XP gains
+    if (safeAmount > 0) {
+      final limitedAmount = _applyXpRateLimiting(safeAmount);
+      if (limitedAmount <= 0) {
+        print('XP gain rate limited - daily or hourly limit reached');
+        return; // Skip this XP gain entirely if rate limited
+      }
+      safeAmount = limitedAmount;
+    }
 
     final oldXP = _userProgress.totalXP;
-    final newTotalXP = (oldXP + amount).clamp(0, 1 << 31);
+    final newTotalXP = (oldXP + safeAmount).clamp(0, 1 << 31);
 
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -460,6 +580,38 @@ class UserProgressProvider with ChangeNotifier {
 
   Future<void> useStreakFreeze() async {
     await _checkStreakFreezeAchievements();
+    
+    // Update user progress to record streak freeze usage
+    _userProgress = _userProgress.copyWith(
+      totalStreakFreezesUsed: _userProgress.totalStreakFreezesUsed + 1,
+    );
+    
+    await _saveUserProgress();
+    notifyListeners();
+  }
+  
+  Future<void> awardStreakFreezes(int count) async {
+    // Find all active habits
+    final buildContext = navigatorKey.currentContext;
+    if (buildContext != null && buildContext.mounted) {
+      final habitProvider = Provider.of<HabitProvider>(buildContext, listen: false);
+      
+      // Award streak freezes to all active habits
+      for (final habit in habitProvider.activeHabits) {
+        await habitProvider.awardStreakFreezes(habit.id, count);
+      }
+      
+      // Show notification
+      if (buildContext.mounted) {
+        ScaffoldMessenger.of(buildContext).showSnackBar(
+          SnackBar(
+            content: Text('$count streak freezes awarded to all habits! ❄️'),
+            backgroundColor: Colors.blue,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   int _calculateLevel(int totalXP) {
@@ -570,5 +722,109 @@ class UserProgressProvider with ChangeNotifier {
   double getXPForDay(BuildContext context, DateTime date) {
     final habits = Provider.of<HabitProvider>(context, listen: false);
     return habits.getTotalXPForDay(date).toDouble();
+  }
+  
+  // Clean up XP gain history entries older than 24 hours
+  void _cleanupXpGainHistory() {
+    final now = DateTime.now();
+    final keysToRemove = <String>[];
+    
+    for (final key in _xpGainHistory.keys) {
+      try {
+        final parts = key.split('-');
+        if (parts.length >= 4) {
+          final year = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final day = int.parse(parts[2]);
+          final hour = int.parse(parts[3]);
+          
+          final entryTime = DateTime(year, month, day, hour);
+          final difference = now.difference(entryTime);
+          
+          if (difference.inHours > 24) {
+            keysToRemove.add(key);
+          }
+        }
+      } catch (e) {
+        // Invalid format, remove it
+        keysToRemove.add(key);
+      }
+    }
+    
+    for (final key in keysToRemove) {
+      _xpGainHistory.remove(key);
+    }
+  }
+  
+  // Apply XP rate limiting and return the adjusted amount
+  int _applyXpRateLimiting(int amount) {
+    if (amount <= 0) return amount;
+    
+    final now = DateTime.now();
+    final hourKey = '${now.year}-${now.month}-${now.day}-${now.hour}';
+    final dayKey = '${now.year}-${now.month}-${now.day}';
+    
+    // Calculate current hourly and daily totals
+    int hourlyTotal = 0;
+    int dailyTotal = 0;
+    
+    // Calculate hourly total
+    if (_xpGainHistory.containsKey(hourKey)) {
+      hourlyTotal = _xpGainHistory[hourKey]!;
+    }
+    
+    // Calculate daily total by summing all entries for the current day
+    for (final entry in _xpGainHistory.entries) {
+      if (entry.key.startsWith(dayKey)) {
+        dailyTotal += entry.value;
+      }
+    }
+    
+    // Apply rate limits
+    int adjustedAmount = amount;
+    
+    // Check hourly limit
+    if (hourlyTotal + adjustedAmount > _maxHourlyXP) {
+      adjustedAmount = (_maxHourlyXP - hourlyTotal).clamp(0, amount);
+    }
+    
+    // Check daily limit
+    if (dailyTotal + adjustedAmount > _maxDailyXP) {
+      adjustedAmount = (_maxDailyXP - dailyTotal).clamp(0, adjustedAmount);
+    }
+    
+    // Update history if we're adding XP
+    if (adjustedAmount > 0) {
+      _xpGainHistory[hourKey] = (hourlyTotal + adjustedAmount);
+      _saveXpGainHistory();
+    }
+    
+    return adjustedAmount;
+  }
+  
+  Future<void> addCoins(int amount) async {
+    if (amount <= 0) return;
+    
+    _userProgress = _userProgress.copyWith(
+      coins: (_userProgress.coins + amount).clamp(0, 1 << 31),
+    );
+    
+    await _saveUserProgress();
+    notifyListeners();
+  }
+  
+  Future<void> useCoins(int amount) async {
+    if (amount <= 0 || _userProgress.coins < amount) return;
+    
+    _userProgress = _userProgress.copyWith(
+      coins: (_userProgress.coins - amount).clamp(0, 1 << 31),
+    );
+    
+    await _saveUserProgress();
+    notifyListeners();
+  }
+  
+  bool canUseCoins(int amount) {
+    return _userProgress.coins >= amount;
   }
 }

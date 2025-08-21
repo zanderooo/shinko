@@ -154,6 +154,7 @@ class HabitRepositoryImpl implements HabitRepository {
 
     final today = DateTime.now();
     final todayEpoch = today.difference(DateTime(1970, 1, 1)).inDays;
+    final yesterdayEpoch = todayEpoch - 1;
     
     int streak = 0;
     int currentDay = todayEpoch;
@@ -164,19 +165,41 @@ class HabitRepositoryImpl implements HabitRepository {
       currentDay--;
     }
     
+    // If we have a streak freeze used yesterday, and the streak would be broken,
+    // we should continue counting the streak
+    if (streak == 0 && completionHistory.contains(yesterdayEpoch)) {
+      streak = 1;
+      currentDay = yesterdayEpoch - 1;
+      
+      // Continue counting streak from the day before yesterday
+      while (completionHistory.contains(currentDay)) {
+        streak++;
+        currentDay--;
+      }
+    }
+    
     return streak;
   }
 
   int _calculateBestStreak(List<int> completionHistory, int currentBest) {
     if (completionHistory.isEmpty) return currentBest;
 
+    // Sort the completion history to ensure it's in chronological order
+    final sortedHistory = List<int>.from(completionHistory)..sort();
+    
     int bestStreak = 0;
     int currentStreak = 1;
 
-    for (int i = 1; i < completionHistory.length; i++) {
-      if (completionHistory[i] - completionHistory[i - 1] == 1) {
+    for (int i = 1; i < sortedHistory.length; i++) {
+      // Check if consecutive days or if there's only a one-day gap (potential streak freeze)
+      if (sortedHistory[i] - sortedHistory[i - 1] == 1) {
+        currentStreak++;
+      } else if (sortedHistory[i] - sortedHistory[i - 1] == 2) {
+        // Potential streak freeze (one day gap)
+        // We'll count this as a continuation of the streak
         currentStreak++;
       } else {
+        // Gap is more than one day, reset streak
         bestStreak = bestStreak > currentStreak ? bestStreak : currentStreak;
         currentStreak = 1;
       }
