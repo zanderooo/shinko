@@ -5,6 +5,9 @@ import 'package:shinko/src/domain/repositories/habit_repository.dart';
 import 'package:shinko/src/presentation/providers/user_progress_provider.dart';
 import 'package:shinko/src/presentation/providers/quest_provider.dart';
 import 'package:shinko/src/core/navigator_key.dart';
+import 'package:shinko/src/core/services/feedback_service.dart';
+import 'package:shinko/src/core/services/notification_service.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class HabitProvider with ChangeNotifier {
   final HabitRepository _habitRepository;
@@ -40,6 +43,8 @@ class HabitProvider with ChangeNotifier {
     try {
       final habits = await _habitRepository.getAllHabits();
       _habits = habits;
+      // Schedule evening nudges
+      await _scheduleEveningNudges();
       final buildContext = navigatorKey.currentContext;
       final questProvider = buildContext != null && buildContext.mounted
           ? Provider.of<QuestProvider>(buildContext, listen: false)
@@ -52,6 +57,18 @@ class HabitProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+  Future<void> _scheduleEveningNudges() async {
+    // 8 PM: One habit left nudge (generic message)
+    final now = DateTime.now();
+    final eight = DateTime(now.year, now.month, now.day, 20, 0);
+    final ten = DateTime(now.year, now.month, now.day, 22, 0);
+    final eightTz = tz.TZDateTime.from(eight, tz.local);
+    final tenTz = tz.TZDateTime.from(ten, tz.local);
+    try {
+      await NotificationService().scheduleOneTime(880001, eightTz, 'Almost there', 'If one habit remains, finish it now!');
+      await NotificationService().scheduleOneTime(880002, tenTz, 'Protect your streak', 'Don\'t let today slip. Use a streak freeze if needed.');
+    } catch (_) {}
+  }
 
 
 
@@ -59,6 +76,13 @@ class HabitProvider with ChangeNotifier {
     try {
       await _habitRepository.createHabit(habit);
       await loadHabits();
+
+      if (habit.reminderTime != null && habit.reminderTime!.contains(':')) {
+        final parts = habit.reminderTime!.split(':');
+        final hour = int.tryParse(parts[0]) ?? 8;
+        final minute = int.tryParse(parts[1]) ?? 0;
+        await NotificationService().scheduleDaily(habit.id, hour, minute, 'Reminder: ${habit.title}', 'Time to keep your streak.');
+      }
 
       final buildContext = navigatorKey.currentContext;
       if (buildContext != null && buildContext.mounted) {
@@ -85,6 +109,7 @@ class HabitProvider with ChangeNotifier {
     try {
       await _habitRepository.deleteHabit(id);
       await loadHabits();
+      await NotificationService().cancelForHabit(id);
     } catch (e) {
       _error = 'Failed to delete habit: ${e.toString()}';
       notifyListeners();
@@ -113,6 +138,11 @@ class HabitProvider with ChangeNotifier {
 
         if (pendingTodayHabits.isEmpty) {
           await userProgressProvider.incrementPerfectDays();
+        }
+
+        final ctx = navigatorKey.currentContext;
+        if (ctx != null) {
+          await FeedbackService.celebrate(ctx, message: '+${habit.xpValue} XP');
         }
       }
       

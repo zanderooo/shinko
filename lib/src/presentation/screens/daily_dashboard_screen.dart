@@ -171,6 +171,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
 
   Widget _buildTomorrowMessageCard(TomorrowMessageProvider tomorrowProvider) {
     final hasMessage = tomorrowProvider.currentMessage != null;
+    final hasSavedForTomorrow = tomorrowProvider.tomorrowMessage != null && tomorrowProvider.currentMessage == null;
     
     return Container(
       decoration: BoxDecoration(
@@ -217,6 +218,19 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                 fontStyle: FontStyle.italic,
                 height: 1.5,
               ),
+            )
+          else if (hasSavedForTomorrow)
+            Row(
+              children: [
+                const Icon(Icons.schedule, size: 16, color: Colors.white70),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Saved for tomorrow: "${tomorrowProvider.tomorrowMessage}"',
+                    style: AppTheme.caption,
+                  ),
+                ),
+              ],
             )
           else
             Text(
@@ -934,6 +948,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
     final descriptionController = TextEditingController();
     HabitCategory selectedCategory = HabitCategory.health;
     HabitDifficulty selectedDifficulty = HabitDifficulty.easy;
+    int targetCount = 1;
+    String? reminderTime; // HH:mm
 
     showDialog(
       context: context,
@@ -950,6 +966,41 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                   labelText: 'Habit Name',
                   hintText: 'e.g., Morning Meditation',
                 ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Daily target (times)',
+                        hintText: 'e.g., 1',
+                      ),
+                      onChanged: (v) {
+                        final n = int.tryParse(v) ?? 1;
+                        targetCount = n.clamp(1, 20);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Reminder (HH:mm) optional',
+                        hintText: 'Tap to pick',
+                      ),
+                      onTap: () async {
+                        final now = TimeOfDay.now();
+                        final picked = await showTimePicker(context: context, initialTime: now);
+                        if (picked != null) {
+                          reminderTime = picked.format(context);
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               TextField(
@@ -1002,6 +1053,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen>
                   category: selectedCategory,
                   difficulty: selectedDifficulty,
                   xpValue: _calculateXPForDifficulty(selectedDifficulty),
+                  targetCount: targetCount,
+                  reminderTime: reminderTime,
                   createdAt: DateTime.now(),
                 );
                 
@@ -1166,7 +1219,9 @@ class __MysteryChestCardState extends State<_MysteryChestCard> {
                     final up = localContext.read<UserProgressProvider>();
                     await up.addXPWithAnimation(xp, 'bonus_chest');
                     if (cosmeticId != null && localContext.mounted) {
-                      // optional: unlock cosmetic via provider if passed
+                      ScaffoldMessenger.of(localContext).showSnackBar(
+                        const SnackBar(content: Text('Unlocked cosmetic!')),
+                      );
                     }
                     if (localContext.mounted) {
                       ScaffoldMessenger.of(localContext).showSnackBar(

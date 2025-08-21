@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:shinko/src/presentation/providers/cosmetic_provider.dart';
 import 'package:shinko/src/domain/entities/quest.dart';
 import 'package:shinko/src/presentation/providers/habit_provider.dart';
 
@@ -141,9 +143,15 @@ class QuestProvider with ChangeNotifier {
     // cosmetic reward chance
     final rewardXp = chest.rewardXp;
     String? cosmeticId;
-    // CosmeticProvider lives above; optional unlock
-    // Keeping it simple: 30% chance to unlock a random cosmetic if any locked remain
-    // Caller can wire CosmeticProvider here if desired
+    // 30% chance to unlock a random cosmetic if any locked remain
+    if (context.mounted) {
+      final cos = context.read<CosmeticProvider>();
+      final candidate = cos.randomLocked();
+      if (candidate != null && Random().nextDouble() < 0.3) {
+        await cos.unlock(candidate.id);
+        cosmeticId = candidate.id;
+      }
+    }
     onReward(rewardXp, cosmeticId);
     
     await _saveClaimedState();

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shinko/src/presentation/theme/app_theme.dart';
+import 'package:shinko/src/domain/entities/habit.dart';
+import 'package:shinko/src/presentation/providers/habit_provider.dart';
+import 'package:shinko/src/presentation/providers/quest_provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -66,6 +70,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_completed', true);
+    // Create 1–2 starter habits
+    if (mounted) {
+      final habitProvider = Provider.of<HabitProvider>(context, listen: false);
+      final now = DateTime.now();
+      await habitProvider.addHabit(Habit(
+        id: 'starter_1_${now.millisecondsSinceEpoch}',
+        title: 'Drink Water',
+        description: 'A glass to start the day',
+        type: HabitType.daily,
+        category: HabitCategory.health,
+        difficulty: HabitDifficulty.easy,
+        xpValue: 10,
+        targetCount: 1,
+        createdAt: now,
+      ));
+      await habitProvider.addHabit(Habit(
+        id: 'starter_2_${now.millisecondsSinceEpoch}',
+        title: 'Read 10 min',
+        description: 'Any topic you like',
+        type: HabitType.daily,
+        category: HabitCategory.learning,
+        difficulty: HabitDifficulty.easy,
+        xpValue: 10,
+        targetCount: 1,
+        createdAt: now,
+      ));
+      // Generate quests for today
+      final questProvider = Provider.of<QuestProvider>(context, listen: false);
+      await questProvider.ensureGeneratedForToday();
+    }
     
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/main');

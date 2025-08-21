@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:shinko/src/core/navigator_key.dart';
+import 'package:shinko/src/core/services/notification_service.dart';
 import 'package:shinko/src/data/datasources/database_helper.dart';
 import 'package:shinko/src/data/repositories/habit_repository_impl.dart';
 
@@ -16,8 +17,9 @@ import 'package:shinko/src/presentation/screens/main_screen.dart';
 import 'package:shinko/src/presentation/screens/onboarding_screen.dart';
 import 'package:shinko/src/presentation/theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
   runApp(const ShinkoApp());
 }
 
@@ -48,16 +50,18 @@ class ShinkoApp extends StatelessWidget {
               (previous ?? QuestProvider(habits))..onHabitsChanged(),
         ),
       ],
-      child: MaterialApp(
-        title: 'Shinkō',
-        theme: AppTheme.darkTheme,
-        navigatorKey: navigatorKey,
-        debugShowCheckedModeBanner: false,
-        initialRoute: '/',
-        routes: {
-          '/': (_) => const SplashScreen(),
-          '/main': (_) => const MainScreen(),
-        },
+      child: Consumer<CosmeticProvider>(
+        builder: (context, cos, _) => MaterialApp(
+          title: 'Shinkō',
+          theme: AppTheme.themeFor(cos.equippedByType['theme']),
+          navigatorKey: navigatorKey,
+          debugShowCheckedModeBanner: false,
+          initialRoute: '/',
+          routes: {
+            '/': (_) => const SplashScreen(),
+            '/main': (_) => const MainScreen(),
+          },
+        ),
       ),
     );
   }

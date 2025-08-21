@@ -276,7 +276,10 @@ class UserProgressProvider with ChangeNotifier {
   Future<void> addXP(int amount, String source) async {
     if (amount == 0) return;
 
-    final newTotalXP = _userProgress.totalXP + amount;
+    // Only allow XP mutations for habit sources
+    if (!source.startsWith('habit_')) return;
+
+    final newTotalXP = (_userProgress.totalXP + amount).clamp(0, 1 << 31);
     final currentLevel = _userProgress.currentLevel;
     final newLevel = _calculateLevel(newTotalXP);
     final newXpToNextLevel =
@@ -365,9 +368,10 @@ class UserProgressProvider with ChangeNotifier {
   Future<void> addXPWithAnimation(int amount, String source,
       [HabitCategory? category]) async {
     if (amount <= 0) return;
+    if (!source.startsWith('habit_')) return;
 
     final oldXP = _userProgress.totalXP;
-    final newTotalXP = oldXP + amount;
+    final newTotalXP = (oldXP + amount).clamp(0, 1 << 31);
 
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -386,9 +390,8 @@ class UserProgressProvider with ChangeNotifier {
       await _checkLevelAchievements(newLevel);
     }
 
-    if (category != null) {
-      await addStatXP(category, amount);
-    }
+    // FIX: Do NOT change stats here. Stats only update via habit completions.
+
     await _saveUserProgress();
     notifyListeners();
   }
@@ -400,20 +403,25 @@ class UserProgressProvider with ChangeNotifier {
 
     await _checkCompletionAchievements();
     await _checkFirstHabitAchievements();
-    await addStatXP(category, 10); // award 10 stat points for each completion
-    await _saveUserProgress();
 
+    // FIX: add both stat XP and global XP
+    await addStatXP(category, 10);
+    await addXP(10, 'habit_${category.name}');
+
+    await _saveUserProgress();
     notifyListeners();
   }
 
   Future<void> decrementHabitCompletion(HabitCategory category) async {
     _userProgress = _userProgress.copyWith(
-      totalHabitsCompleted: _userProgress.totalHabitsCompleted - 1,
+      totalHabitsCompleted: (_userProgress.totalHabitsCompleted - 1).clamp(0, 1 << 31),
     );
 
+    // FIX: remove both stat XP and global XP
     await removeStatXP(category, 10);
-    await _saveUserProgress();
+    await addXP(-10, 'habit_${category.name}');
 
+    await _saveUserProgress();
     notifyListeners();
   }
 

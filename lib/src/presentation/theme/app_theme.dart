@@ -95,6 +95,38 @@ class AppTheme {
     );
   }
 
+  // Dynamic theme variants based on equipped cosmetic id
+  static ThemeData themeFor(String? themeId) {
+    switch (themeId) {
+      case 'theme_cyan':
+        return ThemeData(
+          useMaterial3: true,
+          brightness: Brightness.dark,
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFF06B6D4),
+            secondary: Color(0xFF22D3EE),
+            surface: Color(0xFF0F172A),
+            error: Color(0xFFF87171),
+          ),
+          scaffoldBackgroundColor: const Color(0xFF0B1020),
+        ).copyWith(
+          textTheme: darkTheme.textTheme,
+          cardTheme: darkTheme.cardTheme,
+          inputDecorationTheme: darkTheme.inputDecorationTheme,
+          floatingActionButtonTheme: darkTheme.floatingActionButtonTheme,
+        );
+      case 'theme_neon':
+        return darkTheme.copyWith(
+          colorScheme: darkTheme.colorScheme.copyWith(
+            primary: const Color(0xFF00E5FF),
+            secondary: const Color(0xFF7C4DFF),
+          ),
+        );
+      default:
+        return darkTheme;
+    }
+  }
+
   static BoxDecoration get glassCardDecoration => BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         color: _cardColor.withValues(alpha: 0.2),
